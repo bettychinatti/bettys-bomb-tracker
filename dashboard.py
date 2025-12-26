@@ -198,58 +198,198 @@ def render_team_card(col, label: str, summ: Dict[str, Any], prev_s: Dict[str, An
     dbb = None if 'best_back' not in prev_s or summ['best_back'] is None else (summ['best_back'] - prev_s['best_back'])
     dbl = None if 'best_lay' not in prev_s or summ['best_lay'] is None else (summ['best_lay'] - prev_s['best_lay'])
 
-    with col.container(border=True):
-        col.subheader(label)
+    with col.container():
+        # Minimal card header
+        col.markdown(f"### {label}")
+        col.markdown("---")
+        
+        # Metrics in clean grid
         c1, c2 = col.columns(2)
-        c1.metric("BACK total", f"{tb:,.2f}", None if db is None else f"{db:+.2f}")
-        c2.metric("LAY total", f"{tl:,.2f}", None if dl is None else f"{dl:+.2f}")
+        with c1:
+            st.metric("BACK Total", f"₹{tb:,.2f}", None if db is None else f"{db:+.2f}")
+        with c2:
+            st.metric("LAY Total", f"₹{tl:,.2f}", None if dl is None else f"{dl:+.2f}")
+        
         c3, c4 = col.columns(2)
-        c3.metric("Best BACK", bb, None if dbb is None else f"{dbb:+.2f}")
-        c4.metric("Best LAY", bl, None if dbl is None else f"{dbl:+.2f}")
-        back3 = ", ".join([f"{o:.2f}@{a:.2f}" for o,a in summ['back_top3']]) or '-'
-        lay3 = ", ".join([f"{o:.2f}@{a:.2f}" for o,a in summ['lay_top3']]) or '-'
-        col.caption(f"BACK top3: {back3}")
-        col.caption(f"LAY top3: {lay3}")
-        # session cumulative
+        with c3:
+            st.metric("Best BACK", bb, None if dbb is None else f"{dbb:+.2f}")
+        with c4:
+            st.metric("Best LAY", bl, None if dbl is None else f"{dbl:+.2f}")
+        
+        # Top 3 odds
+        col.markdown("")  # Spacing
+        back3 = ", ".join([f"{o:.2f}@₹{a:.0f}" for o,a in summ['back_top3']]) or 'No data'
+        lay3 = ", ".join([f"{o:.2f}@₹{a:.0f}" for o,a in summ['lay_top3']]) or 'No data'
+        col.caption(f"**BACK top 3:** {back3}")
+        col.caption(f"**LAY top 3:** {lay3}")
+        
+        # Session cumulative (minimal display)
         inflow = sess_s.get('in_back',0.0) + sess_s.get('in_lay',0.0)
         outflow = sess_s.get('out_back',0.0) + sess_s.get('out_lay',0.0)
         net = sess_s.get('net_back',0.0) + sess_s.get('net_lay',0.0)
-        col.write(f"Session staked≈{inflow:,.2f} • withdrawn≈{outflow:,.2f} • net≈{net:,.2f}")
+        
+        # Color-coded net
+        net_color = "#16a34a" if net > 0 else "#dc2626" if net < 0 else "#6b7280"
+        col.markdown(f"""
+        <div style='margin-top: 1rem; padding: 0.75rem; background: #F9FAFB; border-radius: 6px; border-left: 3px solid {net_color};'>
+            <div style='font-size: 0.85rem; color: #6b7280;'>Session Flow</div>
+            <div style='font-size: 0.9rem; color: #404040; margin-top: 0.25rem;'>
+                <span style='color: #16a34a;'>+₹{inflow:,.0f}</span> staked · 
+                <span style='color: #dc2626;'>-₹{outflow:,.0f}</span> withdrawn · 
+                <span style='color: {net_color}; font-weight: 500;'>₹{net:+,.0f}</span> net
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def main():
-    st.set_page_config(page_title="Betty's Bomb Tracker", layout="wide")
-    st.title("Betty's Bomb Tracker")
+    # Minimal light theme configuration
+    st.set_page_config(
+        page_title="Advanced Market Load Tracker",
+        page_icon="📊",
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
+    
+    # Custom CSS for minimal light theme
+    st.markdown("""
+    <style>
+        /* Light minimal theme */
+        .stApp {
+            background-color: #FAFAFA;
+        }
+        
+        /* Clean header */
+        h1 {
+            font-weight: 300;
+            letter-spacing: -0.5px;
+            color: #1a1a1a;
+            font-size: 2rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        h3 {
+            font-weight: 400;
+            color: #404040;
+            font-size: 1.1rem !important;
+        }
+        
+        /* Minimal cards */
+        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+            background: white;
+            border: 1px solid #E8E8E8;
+            border-radius: 8px;
+            padding: 1.2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        
+        /* Metrics styling */
+        [data-testid="stMetricValue"] {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+        
+        [data-testid="stMetricDelta"] {
+            font-size: 0.9rem;
+        }
+        
+        /* Positive/negative colors */
+        [data-testid="stMetricDelta"] svg {
+            display: none;
+        }
+        
+        /* Buttons minimal */
+        .stButton button {
+            background: white;
+            border: 1px solid #D0D0D0;
+            border-radius: 6px;
+            color: #404040;
+            font-weight: 400;
+            padding: 0.4rem 1rem;
+            transition: all 0.15s;
+        }
+        
+        .stButton button:hover {
+            border-color: #1a1a1a;
+            background: #F5F5F5;
+        }
+        
+        /* Sidebar minimal */
+        [data-testid="stSidebar"] {
+            background: #FFFFFF;
+            border-right: 1px solid #E8E8E8;
+        }
+        
+        /* Caption text */
+        .stCaptionContainer {
+            color: #707070;
+            font-size: 0.85rem;
+        }
+        
+        /* Divider */
+        hr {
+            border-color: #E8E8E8;
+            margin: 1.5rem 0;
+        }
+        
+        /* Selectbox/inputs */
+        .stSelectbox, .stSlider {
+            background: white;
+        }
+        
+        /* Remove default padding */
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 1rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Clean header
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("# Advanced Market Load Tracker")
+        st.caption("Real-time money flow analysis · Accurate delta tracking")
+    with col2:
+        now_ist = datetime.now(IST).strftime('%H:%M:%S IST')
+        st.metric("", now_ist, label_visibility="collapsed")
+    
+    st.divider()
+    
     ensure_state()
 
-    # Controls
-    st.sidebar.header("Controls")
-    refresh_ms = st.sidebar.slider("Refresh interval (ms)", 500, 3000, 1000, step=250)
-    track_scope = st.sidebar.radio("Track scope", ["Selected sport", "All sports"], index=0)
-    st.sidebar.caption("Tracking starts automatically for in-play events. Upcoming events appear as 'Scheduled'.")
-
-    # Fetch events with 30-min cache and manual refresh controls
-    b1, b2 = st.sidebar.columns(2)
-    do_refresh = b1.button("Refresh matches now")
-    do_clear = b2.button("Clear cache", help="Drops the 30‑min cache and refetches")
+    # Minimal controls in expander
+    with st.expander("⚙️ Settings", expanded=False):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            refresh_ms = st.slider("Update interval (ms)", 500, 3000, 1000, step=250)
+        with col2:
+            track_scope = st.radio("Scope", ["Selected sport", "All sports"], index=0, horizontal=True)
+        with col3:
+            manual_mode = st.checkbox("Manual mode", help="Enter Market IDs manually")
+    
+    # Fetch events with cache
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        st.caption("📡 Live data feed active")
+    with col2:
+        do_refresh = st.button("↻ Refresh", use_container_width=True)
+    with col3:
+        do_clear = st.button("✕ Clear", help="Clear cache", use_container_width=True)
+    
     if do_clear:
-        # Reset cache so the next fetch is guaranteed to refetch
         st.session_state['events_cache'] = {'events': [], 'last_fetch_epoch': 0.0, 'error': None}
+    
     events, events_error, last_fetch_epoch = get_events_cached(force=(do_refresh or do_clear))
-    # Status line: last updated + count
     count = len(events) if isinstance(events, list) else 0
+    
     if events_error:
-        st.sidebar.warning("Events API unavailable. Switch to Manual input mode below to track by Market ID.")
-        st.sidebar.caption("Tip: Click Clear cache, then Refresh.")
+        st.warning(f"⚠️ Events API unavailable. Switch to Manual mode. Error: {events_error}")
+    
     if last_fetch_epoch:
         last_fetch_str = datetime.fromtimestamp(last_fetch_epoch, IST).strftime('%H:%M:%S')
-        st.sidebar.caption(f"Events last updated: {last_fetch_str} • {count} events • auto every 30 min")
-
-    # Manual fallback toggle
-    manual_mode = st.sidebar.checkbox(
-        "Manual input mode", value=(events_error is not None),
-        help="Enable to enter Market IDs and labels manually when events feed is down"
-    )
+        st.caption(f"Last updated: {last_fetch_str} · {count} events · Auto-refresh every 30 min")
 
     def sport_of(ev: Dict[str, Any]) -> str:
         etid_val = ev.get('event_type_id')
@@ -285,7 +425,14 @@ def main():
     # Sports list (used when not in manual mode)
     sports_present = sorted({sport_of(ev) for ev in events})
     sports_present = [s for s in sports_present if s != 'Other'] or ['Cricket', 'Tennis', 'Soccer']
-    selected_sport = st.sidebar.selectbox("Sport", options=sports_present)
+    
+    # Sport selector
+    st.divider()
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        selected_sport = st.selectbox("Sport", options=sports_present, label_visibility="collapsed")
+    with col2:
+        st.caption(f"Showing {selected_sport} markets")
 
     # Partition events
     # Current time in IST
@@ -309,13 +456,17 @@ def main():
     # Choose which events to track this tick (or switch to manual inputs)
     started_by_time: List[Dict[str, Any]] = []  # time-based fallback list
     if manual_mode:
-        st.sidebar.subheader("Manual inputs")
-        markets_text = st.sidebar.text_input("Market IDs (comma-separated)", value="")
-        match_label = st.sidebar.text_input("Match label (e.g., Team A vs Team B)", value="")
+        st.subheader("Manual Input Mode")
+        col1, col2 = st.columns(2)
+        with col1:
+            markets_text = st.text_input("Market IDs (comma-separated)", value="")
+        with col2:
+            match_label = st.text_input("Match label", value="", placeholder="e.g., Team A vs Team B")
+        
         # Derive team labels from the match label if present
         t1, t2 = team_labels(match_label)
         if not match_label:
-            st.sidebar.info("Enter a match label to name the team cards (e.g., 'Sharjah vs Dubai').")
+            st.info("💡 Enter a match label to name the team cards")
         # Build synthetic in-play events for the specified market IDs
         manual_market_ids = [m.strip() for m in markets_text.split(',') if m.strip()]
         filtered = []
@@ -342,19 +493,9 @@ def main():
 
         started_by_time = [ev for ev in upcoming if has_started_by_time(ev)]
 
-    # Sidebar: list of events with quick navigation
+    # Quick navigation sidebar removed - now inline
     if 'focus_mid' not in st.session_state:
         st.session_state['focus_mid'] = None
-    st.sidebar.subheader("In-play matches")
-    for ev in inplay:
-        mid = str(ev.get('market_id'))
-        label = event_label(ev)
-        if st.sidebar.button(f"🎯 {label}", key=f"goto_{mid}"):
-            st.session_state['focus_mid'] = mid
-            if hasattr(st, 'rerun'):
-                st.rerun()
-    if not manual_mode:
-        st.sidebar.subheader("Scheduled")
         for ev in upcoming[:10]:
             start = parse_time(ev.get('open_date'))
             start_str = start.astimezone(IST).strftime('%H:%M') if start else '-'
@@ -431,8 +572,6 @@ def main():
             mid = s.split('|', 1)[0]
             by_mid[mid] = s
 
-    # Render matches
-    st.subheader("Live matches")
     # Combine true in-play with time-based fallback (secondary)
     time_based_ids = set()
     if not manual_mode:
@@ -441,34 +580,31 @@ def main():
     if not manual_mode:
         # Append time-based only if not already in in-play
         inplay_display += [ev for ev in started_by_time if str(ev.get('market_id')) not in {str(e.get('market_id')) for e in inplay}]
-
-    # Reorder or filter by focus
-    if st.session_state.get('focus_mid'):
-        fm = st.session_state['focus_mid']
-        inplay_display = [ev for ev in inplay_display if str(ev.get('market_id')) == fm] + [ev for ev in inplay_display if str(ev.get('market_id')) != fm]
-        if focus_only:
-            inplay_display = [ev for ev in inplay_display if str(ev.get('market_id')) == fm]
-
+    
+    # Render matches
+    st.divider()
     if not inplay_display:
         if manual_mode:
-            st.info("Enter one or more Market IDs in the sidebar to start tracking.")
+            st.info("💡 Enter Market IDs above to start tracking")
         else:
-            msg = "No in-play matches in the selected scope." if not events_error else f"Events feed unavailable: {events_error}"
+            msg = "No live markets available" if not events_error else f"⚠️ API Error: {events_error}"
             st.info(msg)
     else:
-        # Chunk into rows of two
+        # Display live markets
         for ev in inplay_display:
             mid = str(ev.get('market_id'))
             name = event_label(ev)
             labels = st.session_state['labels'].get(mid, ["Team 1", "Team 2"])
-            container = st.container(border=True)
-            # Mark time-based items for clarity
-            suffix = " • time-based" if mid in time_based_ids and ev not in inplay else ""
-            container.markdown(f"#### {name}  •  Market {mid}{suffix}")
+            
+            # Market container
+            st.markdown("")  # Spacing
+            suffix = " 🕐" if mid in time_based_ids and ev not in inplay else " 🔴 LIVE"
+            st.markdown(f"### {name}{suffix}")
+            st.caption(f"Market ID: {mid}")
 
             s = by_mid.get(mid)
             if not s:
-                container.warning("No market data yet.")
+                st.warning("⏳ Waiting for market data...")
                 continue
             mid2, meta, runners = parse_market_string(s)
 
@@ -477,16 +613,26 @@ def main():
             if mid2 not in st.session_state['prev']:
                 st.session_state['prev'][mid2] = prev
 
-            # Market total matched metric
+            # Market total matched metric (minimal display)
             tm = meta.get('total_matched')
             tm_prev = prev['market'].get('total_matched')
             tm_delta = None if tm_prev is None or tm is None else (tm - tm_prev)
-            mcol = container.container()
-            mcol.metric("Market total matched", "-" if tm is None else f"{tm:,.2f}", None if tm_delta is None else f"{tm_delta:+.2f}")
+            
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.metric("Total Matched", "-" if tm is None else f"₹{tm:,.0f}")
+            with col2:
+                if tm_delta is not None:
+                    delta_color = "#16a34a" if tm_delta > 0 else "#6b7280"
+                    st.markdown(f"<div style='padding: 0.5rem 0;'><span style='color: {delta_color}; font-size: 0.9rem;'>Δ {tm_delta:+,.0f}</span></div>", unsafe_allow_html=True)
+            with col3:
+                st.caption(f"Updated {datetime.now(IST).strftime('%H:%M:%S')}")
+            
             prev['market']['total_matched'] = tm
 
-            # Team cards
-            cols = container.columns(2)
+            # Team cards in clean grid
+            st.markdown("")
+            cols = st.columns(2)
             for idx, r in enumerate(runners[:2]):
                 label = labels[idx] if idx < len(labels) else f"Runner {idx+1}"
                 summ = summarize_runner(r)
@@ -521,10 +667,15 @@ def main():
                 }
 
             st.session_state['prev'][mid2] = prev
+            st.divider()
 
-    st.caption(f"Last updated: {datetime.now(IST).strftime('%H:%M:%S')}")
-    # Robust auto-refresh compatible across Streamlit versions
-    auto = st.sidebar.checkbox("Auto refresh", value=True, help="Re-run the dashboard automatically at the chosen interval")
+    # Auto-refresh footer
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.caption(f"Last update: {datetime.now(IST).strftime('%H:%M:%S IST')} · Auto-refresh every {refresh_ms}ms")
+    with col2:
+        auto = st.checkbox("Auto", value=True, help="Auto-refresh")
+    
     if auto:
         time.sleep(max(0.1, refresh_ms/1000.0))
         if hasattr(st, 'rerun'):
