@@ -15,18 +15,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Copy app
+# Copy and install dependencies
 COPY requirements.txt /app/
 RUN pip install -r requirements.txt
-COPY . /app
 
-# Ensure data dir exists and is writable
-RUN mkdir -p /app/data && chmod -R 777 /app/data
-
-# Streamlit config via env; run background tracker + app
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy app files
+COPY dashboard.py /app/
 
 EXPOSE 8501
 
-CMD ["/app/entrypoint.sh"]
+# Run Streamlit directly
+CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
