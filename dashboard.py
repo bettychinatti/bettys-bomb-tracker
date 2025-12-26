@@ -161,22 +161,29 @@ def quick_check_odds_available(market_id):
         return False
 
 def sort_events_by_odds_availability(events):
-    """Sort events - prioritize those likely to have odds (with market_id)"""
+    """Sort events - prioritize those with available odds"""
     events_with_status = []
     
     for event in events:
         market_id = event.get('market_id', '')
-        # Quick heuristic: events with market_id are more likely to have odds
-        priority = 1 if market_id else 0
+        has_odds = False
+        odds_data = None
+        
+        if market_id:
+            # Fetch odds to check availability (will be cached)
+            odds_data = fetch_odds(market_id, event.get('name', ''))
+            if odds_data and odds_data.get('runners'):
+                has_odds = True
         
         events_with_status.append({
             'event': event,
-            'priority': priority,
-            'market_id': market_id
+            'market_id': market_id,
+            'has_odds': has_odds,
+            'odds_data': odds_data  # Cache for later use
         })
     
-    # Sort by priority (market_id present = higher priority)
-    events_with_status.sort(key=lambda x: x['priority'], reverse=True)
+    # Sort by odds availability (True before False)
+    events_with_status.sort(key=lambda x: x['has_odds'], reverse=True)
     
     return events_with_status
 
@@ -212,17 +219,20 @@ with col2:
 with col1:
     st.markdown(f"### {sport_info['icon']} Live {sport_info['name']} Matches")
     
-    # Show loading spinner while fetching events
-    with st.spinner('🔄 Loading live matches...'):
+    # Show loading spinner while fetching events and sorting by odds
+    with st.spinner('🔄 Loading & sorting matches...'):
         events = fetch_events_by_sport(sport_id)
+        
+        if events:
+            # Sort by odds availability (matches with odds first)
+            sorted_events = sort_events_by_odds_availability(events)
+        else:
+            sorted_events = []
     
-    if not events:
+    if not sorted_events:
         st.info(f"No live {sport_info['name']} matches right now. Try another sport!")
     else:
-        st.metric("🔴 Live Matches", len(events))
-        
-        # Quick sort by market_id presence (instant, no API calls)
-        sorted_events = sort_events_by_odds_availability(events)
+        st.metric("🔴 Live Matches", len(sorted_events))
         
         # Group by competition (maintaining sort order)
         competitions = {}
@@ -240,45 +250,43 @@ with col1:
                 event = event_wrapper['event']
                 event_name = event.get('name', 'Unknown')
                 market_id = event_wrapper['market_id']
+                has_odds = event_wrapper['has_odds']
+                cached_odds = event_wrapper['odds_data']
                 
-                # Show match immediately, fetch odds on-demand
-                st.markdown(f"##### 🔴 {event_name}")
+                # Add visual indicator for odds availability
+                odds_icon = "✅" if has_odds else "⏳"
+                st.markdown(f"##### {odds_icon} {event_name}")
                 
-                if market_id:
-                    # Fetch odds now (will be cached by Streamlit for 5 seconds)
-                    odds_data = fetch_odds(market_id, event_name)
-                    
-                    if odds_data and odds_data.get('runners'):
-                        runners = odds_data['runners']
-                        cols = st.columns(len(runners))
-                        for idx, runner in enumerate(runners):
-                            with cols[idx]:
-                                name = runner.get('name', f'Team {idx+1}')
-                                back = runner.get('back', [{}])
-                                lay = runner.get('lay', [{}])
-                                bp = back[0].get('price', '-') if back else '-'
-                                bs = back[0].get('size', 0) if back else 0
-                                lp = lay[0].get('price', '-') if lay else '-'
-                                ls = lay[0].get('size', 0) if lay else 0
-                                st.markdown(f'''
-                                <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
-                                    <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
-                                    <div style="display: flex; justify-content: center; gap: 8px;">
-                                        <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                            <div style="color: #48bb78; font-weight: bold;">{bp}</div>
-                                            <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
-                                        </div>
-                                        <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                            <div style="color: #f56565; font-weight: bold;">{lp}</div>
-                                            <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
-                                        </div>
+                if has_odds and cached_odds:
+                    # Use cached odds data (already fetched during sorting)
+                    runners = cached_odds['runners']
+                    cols = st.columns(len(runners))
+                    for idx, runner in enumerate(runners):
+                        with cols[idx]:
+                            name = runner.get('name', f'Team {idx+1}')
+                            back = runner.get('back', [{}])
+                            lay = runner.get('lay', [{}])
+                            bp = back[0].get('price', '-') if back else '-'
+                            bs = back[0].get('size', 0) if back else 0
+                            lp = lay[0].get('price', '-') if lay else '-'
+                            ls = lay[0].get('size', 0) if lay else 0
+                            st.markdown(f'''
+                            <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
+                                <div style="display: flex; justify-content: center; gap: 8px;">
+                                    <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                        <div style="color: #48bb78; font-weight: bold;">{bp}</div>
+                                        <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
+                                    </div>
+                                    <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                        <div style="color: #f56565; font-weight: bold;">{lp}</div>
+                                        <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
                                     </div>
                                 </div>
-                                ''', unsafe_allow_html=True)
-                    else:
-                        st.caption("⏳ Odds not available")
+                            </div>
+                            ''', unsafe_allow_html=True)
                 else:
-                    st.caption("⏳ No market data")
+                    st.caption("⏳ Odds not available")
                 st.markdown("---")
 
 st.caption("Advanced Market Load Tracker • Built for live analysis")
