@@ -146,6 +146,44 @@ def format_stake(val):
         return f"₹{val/1000:.1f}K"
     return f"₹{val:.0f}"
 
+def calculate_market_load(runners):
+    """Calculate total bets and P/L for each runner"""
+    market_load = []
+    
+    for runner in runners:
+        name = runner.get('name', 'Unknown')
+        back_prices = runner.get('back', [])
+        lay_prices = runner.get('lay', [])
+        
+        # Calculate total back stakes (money on this team to win)
+        total_back = sum(b.get('size', 0) for b in back_prices)
+        
+        # Calculate total lay stakes (money against this team)
+        total_lay = sum(l.get('size', 0) for l in lay_prices)
+        
+        # Total bet on this runner
+        total_bet = total_back + total_lay
+        
+        # P/L if this runner wins (simplified calculation)
+        # If runner wins: you get back stakes but lose lay stakes
+        best_back_price = back_prices[0].get('price', 1) if back_prices else 1
+        pl_if_win = (total_back * (best_back_price - 1)) - total_lay
+        
+        market_load.append({
+            'name': name,
+            'total_bet': total_bet,
+            'pl_if_win': pl_if_win,
+            'percentage': 0  # Will calculate after we have all totals
+        })
+    
+    # Calculate percentages
+    total_all_bets = sum(m['total_bet'] for m in market_load)
+    if total_all_bets > 0:
+        for m in market_load:
+            m['percentage'] = (m['total_bet'] / total_all_bets) * 100
+    
+    return market_load
+
 def quick_check_odds_available(market_id):
     """Quick check if odds are available without full parsing"""
     try:
@@ -260,6 +298,37 @@ with col1:
                 if has_odds and cached_odds:
                     # Use cached odds data (already fetched during sorting)
                     runners = cached_odds['runners']
+                    
+                    # Calculate market load
+                    market_load = calculate_market_load(runners)
+                    
+                    # Display Market Load Bar (only for 2-runner markets)
+                    if len(market_load) == 2:
+                        team1 = market_load[0]
+                        team2 = market_load[1]
+                        
+                        st.markdown(f"""
+                        <div style="background: rgba(30,30,50,0.9); border-radius: 10px; padding: 15px; margin: 10px 0;">
+                            <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px; text-align: center;">Match Load</div>
+                            <div style="display: flex; height: 25px; border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                                <div style="background: #ef4444; width: {team1['percentage']:.1f}%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: bold;">
+                                    {team1['percentage']:.1f}%
+                                </div>
+                                <div style="background: #10b981; width: {team2['percentage']:.1f}%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: bold;">
+                                    {team2['percentage']:.1f}%
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.75rem;">
+                                <span>{team1['name'][:20]}: {team1['percentage']:.1f}%</span>
+                                <span>{team2['name'][:20]}: {team2['percentage']:.1f}%</span>
+                            </div>
+                            <div style="color: #3b82f6; font-size: 0.75rem; text-align: center; margin-top: 5px;">
+                                Match Load on <span style="color: #60a5fa;">{team1['name'] if team1['percentage'] > team2['percentage'] else team2['name']}</span>
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Display team stats with Total Bet and P/L
                     cols = st.columns(len(runners))
                     for idx, runner in enumerate(runners):
                         with cols[idx]:
@@ -270,10 +339,19 @@ with col1:
                             bs = back[0].get('size', 0) if back else 0
                             lp = lay[0].get('price', '-') if lay else '-'
                             ls = lay[0].get('size', 0) if lay else 0
+                            
+                            # Get market load data for this runner
+                            load_data = market_load[idx] if idx < len(market_load) else None
+                            total_bet_display = format_stake(load_data['total_bet']) if load_data else "N/A"
+                            pl_display = format_stake(load_data['pl_if_win']) if load_data else "N/A"
+                            pl_color = "#10b981" if load_data and load_data['pl_if_win'] > 0 else "#ef4444"
+                            
                             st.markdown(f'''
-                            <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
-                                <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
-                                <div style="display: flex; justify-content: center; gap: 8px;">
+                            <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 12px; text-align: center;">
+                                <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px; font-size: 0.95rem;">{name[:18]}</div>
+                                
+                                <!-- Odds Display -->
+                                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 12px;">
                                     <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
                                         <div style="color: #48bb78; font-weight: bold;">{bp}</div>
                                         <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
@@ -281,6 +359,18 @@ with col1:
                                     <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
                                         <div style="color: #f56565; font-weight: bold;">{lp}</div>
                                         <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Market Load Stats -->
+                                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                                    <div style="background: rgba(59, 130, 246, 0.15); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
+                                        <div style="color: #94a3b8; font-size: 0.65rem;">Total Bet</div>
+                                        <div style="color: #3b82f6; font-weight: bold; font-size: 0.95rem;">{total_bet_display}</div>
+                                    </div>
+                                    <div style="background: rgba(239, 68, 68, 0.15); border-radius: 6px; padding: 8px;">
+                                        <div style="color: #94a3b8; font-size: 0.65rem;">P/L if Win</div>
+                                        <div style="color: {pl_color}; font-weight: bold; font-size: 0.95rem;">{pl_display}</div>
                                     </div>
                                 </div>
                             </div>
