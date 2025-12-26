@@ -307,23 +307,31 @@ SPORTS = [
 
 
 def fetch_all_events():
-    """Fetch all live events from the API."""
-    try:
-        url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
-        headers = {
-            "accept": "application/json, text/plain, */*",
-            "origin": "https://d99exch.com",
-            "referer": "https://d99exch.com/",
-        }
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            events = data.get("data", {}).get("events", [])
-            # Filter to only in-play events
-            return [e for e in events if e.get("in_play") == 1]
-        return []
-    except Exception as e:
-        return []
+    """Fetch all live events from ALL sports."""
+    all_events = []
+    headers = {
+        "accept": "application/json, text/plain, */*",
+        "origin": "https://d99exch.com",
+        "referer": "https://d99exch.com/",
+    }
+    
+    # Fetch from all sport IDs
+    sport_ids = [4, 1, 2, 7]  # Cricket, Soccer, Tennis, Horse Racing
+    
+    for sport_id in sport_ids:
+        try:
+            url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("data", {}).get("events", [])
+                # Filter to only in-play events
+                live_events = [e for e in events if e.get("in_play") == 1]
+                all_events.extend(live_events)
+        except:
+            pass
+    
+    return all_events
 
 
 def get_events_by_sport(all_events, sport_id):
@@ -331,7 +339,7 @@ def get_events_by_sport(all_events, sport_id):
     return [e for e in all_events if e.get("event_type_id") == sport_id]
 
 
-def fetch_odds(event_id, market_id):
+def fetch_odds(event_id, market_id, event_name=""):
     """Fetch real-time odds using form-urlencoded POST request."""
     try:
         url = "https://odds.o99exch.com/ws/getMarketDataNew"
@@ -346,19 +354,27 @@ def fetch_odds(event_id, market_id):
         if resp.status_code == 200:
             result = resp.json()
             if result and result[0]:
-                return parse_odds_string(result[0])
+                return parse_odds_string(result[0], event_name)
         return None
     except:
         return None
 
 
-def parse_odds_string(odds_str):
+def parse_odds_string(odds_str, event_name=""):
     """Parse pipe-delimited odds string into structured data."""
     try:
         parts = odds_str.split('|')
         runners = []
         i = 0
         runner_idx = 0
+        
+        # Extract team names from event name (format: "Team A v Team B" or "Team A vs Team B")
+        team_names = []
+        if event_name:
+            if ' v ' in event_name:
+                team_names = [t.strip() for t in event_name.split(' v ', 1)]
+            elif ' vs ' in event_name:
+                team_names = [t.strip() for t in event_name.split(' vs ', 1)]
         
         while i < len(parts):
             if parts[i] == 'ACTIVE':
@@ -389,15 +405,25 @@ def parse_odds_string(odds_str):
                             pass
                         j += 2
                 
+                # Use actual team name if available, otherwise fallback
+                if runner_idx < len(team_names):
+                    name = team_names[runner_idx]
+                else:
+                    name = f"Selection {runner_idx + 1}"
+                
                 runner_idx += 1
                 runners.append({
-                    "name": f"Team {runner_idx}",
+                    "name": name,
                     "back": back_prices,
                     "lay": lay_prices
                 })
                 i = j
             else:
                 i += 1
+        
+        # Handle 3-way markets (like draw in soccer)
+        if len(runners) == 3 and len(team_names) == 2:
+            runners[2]['name'] = "Draw"
         
         return {"runners": runners} if runners else None
     except:
@@ -534,7 +560,7 @@ with main_col:
                 # Event card using expander
                 with st.expander(f"🔴 {event_name}", expanded=False):
                     if market_id:
-                        odds_data = fetch_odds(event_id, market_id)
+                        odds_data = fetch_odds(event_id, market_id, event_name)
                         
                         if odds_data and 'runners' in odds_data:
                             runners = odds_data['runners']
