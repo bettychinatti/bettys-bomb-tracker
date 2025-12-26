@@ -79,6 +79,57 @@ class TokenManager:
         
         return time_until_expiry <= buffer_seconds
     
+    def login_demo_and_get_token(self) -> Optional[str]:
+        """
+        Login using demo account and extract bearer token.
+        
+        Demo accounts typically have public credentials and easier access.
+        
+        Returns:
+            Bearer token string if successful, None otherwise
+        """
+        # Try demo login endpoint (common patterns)
+        demo_endpoints = [
+            "https://api.d99exch.com/api/demo/auth",
+            "https://api.d99exch.com/api/auth/demo",
+            "https://api.d99exch.com/api/guest/auth",
+        ]
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Origin": "https://99exch.com",
+            "Referer": "https://99exch.com/",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        }
+        
+        # Try demo/guest login without credentials
+        for endpoint in demo_endpoints:
+            try:
+                print(f"[token] Trying demo login: {endpoint}")
+                resp = requests.post(endpoint, json={}, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    token = (
+                        data.get("token") or 
+                        data.get("access_token") or 
+                        (data.get("data", {}).get("token") if isinstance(data.get("data"), dict) else None)
+                    )
+                    if token:
+                        payload = self.decode_token_payload(token)
+                        exp = payload.get('exp')
+                        if exp:
+                            exp_dt = datetime.fromtimestamp(exp, tz=timezone.utc)
+                            print(f"[token] ✅ Demo login successful! Token expires at {exp_dt.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+                        else:
+                            print("[token] ✅ Demo login successful! (No expiration info)")
+                        return token
+            except Exception as e:
+                continue
+        
+        print("[token] ❌ Demo login failed on all endpoints")
+        return None
+    
     def login_and_get_token(self) -> Optional[str]:
         """
         Login to 99exch.com and extract bearer token.
@@ -88,6 +139,14 @@ class TokenManager:
         Returns:
             Bearer token string if successful, None otherwise
         """
+        # First try demo login (no credentials needed)
+        if os.getenv("USE_DEMO_LOGIN") == "true":
+            print("[token] USE_DEMO_LOGIN enabled, trying demo login first...")
+            demo_token = self.login_demo_and_get_token()
+            if demo_token:
+                return demo_token
+        
+        # Fall back to regular login with credentials
         if not self.username or not self.password:
             print("[token] Missing username or password. Set EXCH_USERNAME and EXCH_PASSWORD env vars.")
             return None
