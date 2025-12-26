@@ -1,13 +1,9 @@
 """
-Advanced Market Load Tracker - Real-time Odds + Market Load Dashboard
-Shows both live odds AND cumulative money flow tracking
+Advanced Market Load Tracker - Real-time Odds Dashboard
 """
 import streamlit as st
 import requests
-import sqlite3
 from datetime import datetime
-from pathlib import Path
-import os
 
 st.set_page_config(
     page_title="Market Load Tracker",
@@ -16,49 +12,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Database path (same as background tracker)
-if os.path.exists('/data'):
-    DB_PATH = Path('/data') / 'tracker.db'
-else:
-    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
-
 # Dark Theme CSS
 st.markdown("""
 <style>
-    .stApp { background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%); }
+    .stApp {
+        background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    }
     [data-testid="stHeader"] { background: transparent; }
-    .block-container { padding: 1rem 2rem; max-width: 1600px; }
+    .block-container { padding: 1rem 2rem; max-width: 1400px; }
     h1, h2, h3, h4, h5, p, span, label, .stMarkdown { color: #e2e8f0 !important; }
     .stButton > button {
         background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
-        color: white; border: none; border-radius: 12px; padding: 0.75rem 1.5rem; font-weight: 600;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
     }
-    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); }
-    .stButton > button[kind="secondary"] { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    .stButton > button[kind="secondary"] {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
     div[data-testid="stMetric"] {
-        background: rgba(102, 126, 234, 0.1); border: 1px solid rgba(102, 126, 234, 0.2);
-        border-radius: 12px; padding: 1rem;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
     }
     div[data-testid="stMetric"] label { color: #a0aec0 !important; }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #f7fafc !important; }
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;} .stDeployButton {display: none;}
-    .load-card {
-        background: rgba(30,30,50,0.9);
-        border-radius: 12px;
-        padding: 12px;
-        margin: 8px 0;
-        border-left: 4px solid;
-    }
-    .load-positive { border-color: #10b981; }
-    .load-negative { border-color: #ef4444; }
-    .load-neutral { border-color: #6b7280; }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
 SPORTS = [
     {"id": 4, "name": "Cricket", "icon": "🏏"},
     {"id": 1, "name": "Soccer", "icon": "⚽"},
-    {"id": 2, "name": "Tennis", "icon": "🎾"},
+    {"id": 2, "name": "Tennis", "icon": "��"},
     {"id": 7, "name": "Horse Racing", "icon": "🏇"},
 ]
 
@@ -135,52 +131,16 @@ def parse_odds(odds_str, event_name=""):
     except:
         return None
 
-def get_market_loads(market_id):
-    """Fetch cumulative market load tracking from database"""
-    try:
-        if not DB_PATH.exists():
-            return []
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.execute("""
-            SELECT team_label, in_back, in_lay, out_back, out_lay, net_back, net_lay, updated_at
-            FROM cumulative
-            WHERE market_id = ?
-            ORDER BY team_label
-        """, (str(market_id),))
-        rows = cursor.fetchall()
-        conn.close()
-        return [{
-            'team': row[0],
-            'in_back': row[1],
-            'in_lay': row[2],
-            'out_back': row[3],
-            'out_lay': row[4],
-            'net_back': row[5],
-            'net_lay': row[6],
-            'updated': row[7]
-        } for row in rows]
-    except:
-        return []
-
 def format_stake(val):
     if val >= 100000:
-        return f"₹{val/100000:.2f}L"
+        return f"₹{val/100000:.1f}L"
     elif val >= 1000:
         return f"₹{val/1000:.1f}K"
     return f"₹{val:.0f}"
 
-def format_money(val):
-    """Format with +/- sign for deltas"""
-    sign = "+" if val >= 0 else ""
-    if abs(val) >= 100000:
-        return f"{sign}₹{val/100000:.2f}L"
-    elif abs(val) >= 1000:
-        return f"{sign}₹{val/1000:.1f}K"
-    return f"{sign}₹{val:.0f}"
-
 # MAIN UI
 st.markdown("## 📊 Advanced Market Load Tracker")
-st.markdown(f"*Real-time odds + cumulative tracking • {datetime.now().strftime('%H:%M:%S')}*")
+st.markdown(f"*Real-time odds • Last updated: {datetime.now().strftime('%H:%M:%S')}*")
 
 if 'sport' not in st.session_state:
     st.session_state.sport = 4
@@ -198,21 +158,14 @@ st.markdown("---")
 sport_id = st.session_state.sport
 sport_info = next((s for s in SPORTS if s['id'] == sport_id), SPORTS[0])
 
-# Stats sidebar
-col1, col2 = st.columns([4, 1])
+col1, col2 = st.columns([3, 1])
 
 with col2:
     st.markdown("### 📈 Stats")
     if st.button("🔄 Refresh", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-    st.markdown('<div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; text-align: center;"><span style="color: #10b981; font-weight: bold;">🔴 LIVE</span></div>', unsafe_allow_html=True)
-    
-    # DB status
-    if DB_PATH.exists():
-        st.markdown('<div style="background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px;"><span style="color: #3b82f6; font-size: 0.8rem;">✓ Tracker Active</span></div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="background: rgba(234, 179, 8, 0.1); padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px;"><span style="color: #eab308; font-size: 0.8rem;">⚠ Tracker Starting</span></div>', unsafe_allow_html=True)
+    st.markdown('<div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; text-align: center;"><span style="color: #10b981;">🔴 LIVE</span></div>', unsafe_allow_html=True)
 
 with col1:
     st.markdown(f"### {sport_info['icon']} Live {sport_info['name']} Matches")
@@ -223,8 +176,6 @@ with col1:
         st.info(f"No live {sport_info['name']} matches right now. Try another sport!")
     else:
         st.metric("🔴 Live Matches", len(events))
-        
-        # Group by competition
         competitions = {}
         for event in events:
             comp = event.get('competition_name', 'Other')
@@ -234,22 +185,15 @@ with col1:
         
         for comp_name, comp_events in competitions.items():
             st.markdown(f"**🏆 {comp_name}** ({len(comp_events)} matches)")
-            
             for event in comp_events:
                 event_name = event.get('name', 'Unknown')
                 market_id = event.get('market_id', '')
-                
                 st.markdown(f"##### 🔴 {event_name}")
                 
                 if market_id:
-                    # Get odds AND market loads
                     odds_data = fetch_odds(market_id, event_name)
-                    load_data = get_market_loads(market_id)
-                    
                     if odds_data and odds_data.get('runners'):
                         runners = odds_data['runners']
-                        
-                        # Display odds
                         cols = st.columns(len(runners))
                         for idx, runner in enumerate(runners):
                             with cols[idx]:
@@ -260,22 +204,10 @@ with col1:
                                 bs = back[0].get('size', 0) if back else 0
                                 lp = lay[0].get('price', '-') if lay else '-'
                                 ls = lay[0].get('size', 0) if lay else 0
-                                
-                                # Find matching load data for this team
-                                load = next((l for l in load_data if l['team'] in name or name in l['team']), None)
-                                
-                                net_total = 0
-                                load_color = 'neutral'
-                                if load:
-                                    net_total = load['net_back'] + load['net_lay']
-                                    load_color = 'positive' if net_total > 0 else ('negative' if net_total < 0 else 'neutral')
-                                
                                 st.markdown(f'''
-                                <div class="load-card load-{load_color}">
-                                    <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px; font-size: 0.95rem;">{name[:20]}</div>
-                                    
-                                    <!-- Odds -->
-                                    <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 10px;">
+                                <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
+                                    <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
+                                    <div style="display: flex; justify-content: center; gap: 8px;">
                                         <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
                                             <div style="color: #48bb78; font-weight: bold;">{bp}</div>
                                             <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
@@ -285,27 +217,12 @@ with col1:
                                             <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Market Load (if available) -->
-                                    {"" if not load else f'''
-                                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
-                                        <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">💰 Market Load</div>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.7rem;">
-                                            <div style="color: #10b981;">📈 In: {format_stake(load['in_back'] + load['in_lay'])}</div>
-                                            <div style="color: #ef4444;">📉 Out: {format_stake(load['out_back'] + load['out_lay'])}</div>
-                                        </div>
-                                        <div style="margin-top: 4px; font-weight: bold; color: {'#10b981' if net_total > 0 else '#ef4444' if net_total < 0 else '#6b7280'}; font-size: 0.8rem;">
-                                            Net: {format_money(net_total)}
-                                        </div>
-                                    </div>
-                                    '''}
                                 </div>
                                 ''', unsafe_allow_html=True)
                     else:
                         st.caption("⏳ Odds loading...")
                 else:
                     st.caption("No market data")
-                
                 st.markdown("---")
 
-st.caption("Advanced Market Load Tracker • Real-time odds + cumulative tracking")
+st.caption("Advanced Market Load Tracker • Built for live analysis")
