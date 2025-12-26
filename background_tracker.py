@@ -8,12 +8,22 @@ from persistence import init_db, get_conn, upsert_market, upsert_team_labels, in
 EVENTS_API = "https://api.d99hub.com/api/guest/event_list"
 MARKET_API = "https://odds.o99hub.com/ws/getMarketDataNew"
 
+# Enhanced headers to mimic real browser and avoid IP blocking
 HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
-    "Accept": "*/*",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
     "Origin": "https://gin247.net",
     "Referer": "https://gin247.net/inplay",
-    "User-Agent": "Mozilla/5.0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "cross-site",
+    "Connection": "keep-alive",
 }
 
 SPORT_MAP = {1: "Soccer", 2: "Tennis", 4: "Cricket"}
@@ -24,7 +34,7 @@ def market_ids_payload(ids: List[str]) -> List[Tuple[str, str]]:
 
 
 def fetch_events() -> List[Dict[str, Any]]:
-    resp = requests.get(EVENTS_API, timeout=10)
+    resp = requests.get(EVENTS_API, headers=HEADERS, timeout=10)
     resp.raise_for_status()
     data = resp.json()
     events = (data or {}).get('data', {}).get('events', [])
