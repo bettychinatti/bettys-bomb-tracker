@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional, Tuple
 from persistence import get_conn, get_cumulative
+from token_manager import get_valid_token
 
 # Fast, precise, and clean dashboard mirroring the terminal tracker
 
@@ -25,9 +26,12 @@ EVENTS_API = "https://api.d99exch.com/api/client/event_list"
 MARKET_API = "https://odds.o99exch.com/ws/getMarketDataNew"
 
 # Bearer token for API authentication
-# IMPORTANT: Replace this with your actual token from browser network inspector
-# Token expires every ~5 hours, so update regularly
-BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+# AUTO-REFRESH: Set EXCH_USERNAME and EXCH_PASSWORD env vars for automatic token refresh
+# MANUAL: Update this token from browser every ~5 hours if not using auto-refresh
+BEARER_TOKEN_FALLBACK = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+
+# Get valid token (auto-refreshes if credentials provided, otherwise uses fallback)
+BEARER_TOKEN = get_valid_token(fallback_token=BEARER_TOKEN_FALLBACK)
 
 # Enhanced headers matching real browser requests
 HEADERS = {

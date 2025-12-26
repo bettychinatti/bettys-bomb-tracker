@@ -4,34 +4,43 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from persistence import init_db, get_conn, upsert_market, upsert_team_labels, increment_cumulative
+from token_manager import get_valid_token
 
 # Use authenticated client endpoints (not guest endpoints)
 EVENTS_API = "https://api.d99exch.com/api/client/event_list"
 MARKET_API = "https://odds.o99exch.com/ws/getMarketDataNew"
 
 # Bearer token for API authentication
-# IMPORTANT: Replace this with your actual token from browser network inspector
-# Token expires every ~5 hours, so update regularly
-BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+# AUTO-REFRESH: Set EXCH_USERNAME and EXCH_PASSWORD env vars for automatic token refresh
+# MANUAL: Update this token from browser every ~5 hours if not using auto-refresh
+BEARER_TOKEN_FALLBACK = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+
+# Get valid token (auto-refreshes if credentials provided, otherwise uses fallback)
+def get_bearer_token() -> str:
+    """Get valid bearer token, refreshing if needed."""
+    token = get_valid_token(fallback_token=BEARER_TOKEN_FALLBACK)
+    return token or BEARER_TOKEN_FALLBACK
 
 # Enhanced headers matching real browser requests
-HEADERS = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Authorization": f"bearer {BEARER_TOKEN}",  # Authentication required
-    "Origin": "https://99exch.com",
-    "Referer": "https://99exch.com/",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "cross-site",
-    "priority": "u=1, i",
-}
+def get_headers() -> dict:
+    """Get request headers with current valid token."""
+    return {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Authorization": f"bearer {get_bearer_token()}",  # Dynamic token
+        "Origin": "https://99exch.com",
+        "Referer": "https://99exch.com/",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "cross-site",
+        "priority": "u=1, i",
+    }
 
 SPORT_MAP = {1: "Soccer", 2: "Tennis", 4: "Cricket"}
 
@@ -41,7 +50,7 @@ def market_ids_payload(ids: List[str]) -> List[Tuple[str, str]]:
 
 
 def fetch_events() -> List[Dict[str, Any]]:
-    resp = requests.get(EVENTS_API, headers=HEADERS, timeout=10)
+    resp = requests.get(EVENTS_API, headers=get_headers(), timeout=10)
     resp.raise_for_status()
     data = resp.json()
     events = (data or {}).get('data', {}).get('events', [])
@@ -51,7 +60,7 @@ def fetch_events() -> List[Dict[str, Any]]:
 def fetch_market_strings(market_ids: List[str]) -> List[str]:
     if not market_ids:
         return []
-    resp = requests.post(MARKET_API, headers=HEADERS, data=market_ids_payload(market_ids), timeout=10)
+    resp = requests.post(MARKET_API, headers=get_headers(), data=market_ids_payload(market_ids), timeout=10)
     resp.raise_for_status()
     out = resp.json()
     return out if isinstance(out, list) else []
