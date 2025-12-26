@@ -146,6 +146,33 @@ def format_stake(val):
         return f"₹{val/1000:.1f}K"
     return f"₹{val:.0f}"
 
+def sort_events_by_odds_availability(events):
+    """Sort events so matches with available odds appear first"""
+    events_with_status = []
+    
+    for event in events:
+        market_id = event.get('market_id', '')
+        has_odds = False
+        odds_data = None
+        
+        if market_id:
+            # Fetch odds once and cache in wrapper
+            odds_data = fetch_odds(market_id, event.get('name', ''))
+            if odds_data and odds_data.get('runners'):
+                has_odds = True
+        
+        events_with_status.append({
+            'event': event,
+            'has_odds': has_odds,
+            'odds_data': odds_data  # Cache the odds data
+        })
+    
+    # Sort: odds available first (True before False)
+    events_with_status.sort(key=lambda x: x['has_odds'], reverse=True)
+    
+    # Return sorted events with their odds status
+    return events_with_status
+
 # MAIN UI
 st.markdown("## 📊 Advanced Market Load Tracker")
 st.markdown(f"*Real-time odds • Last updated: {datetime.now().strftime('%H:%M:%S')}*")
@@ -183,53 +210,64 @@ with col1:
         st.info(f"No live {sport_info['name']} matches right now. Try another sport!")
     else:
         st.metric("🔴 Live Matches", len(events))
+        
+        # Sort events: odds available first
+        sorted_events = sort_events_by_odds_availability(events)
+        
+        # Group by competition (maintaining sort order)
         competitions = {}
-        for event in events:
+        for event_wrapper in sorted_events:
+            event = event_wrapper['event']
             comp = event.get('competition_name', 'Other')
             if comp not in competitions:
                 competitions[comp] = []
-            competitions[comp].append(event)
+            competitions[comp].append(event_wrapper)
         
         for comp_name, comp_events in competitions.items():
             st.markdown(f"**🏆 {comp_name}** ({len(comp_events)} matches)")
-            for event in comp_events:
+            
+            for event_wrapper in comp_events:
+                event = event_wrapper['event']
+                has_odds = event_wrapper['has_odds']
+                odds_data = event_wrapper['odds_data']  # Use cached odds
                 event_name = event.get('name', 'Unknown')
                 market_id = event.get('market_id', '')
-                st.markdown(f"##### 🔴 {event_name}")
                 
-                if market_id:
-                    odds_data = fetch_odds(market_id, event_name)
-                    if odds_data and odds_data.get('runners'):
-                        runners = odds_data['runners']
-                        cols = st.columns(len(runners))
-                        for idx, runner in enumerate(runners):
-                            with cols[idx]:
-                                name = runner.get('name', f'Team {idx+1}')
-                                back = runner.get('back', [{}])
-                                lay = runner.get('lay', [{}])
-                                bp = back[0].get('price', '-') if back else '-'
-                                bs = back[0].get('size', 0) if back else 0
-                                lp = lay[0].get('price', '-') if lay else '-'
-                                ls = lay[0].get('size', 0) if lay else 0
-                                st.markdown(f'''
-                                <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
-                                    <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
-                                    <div style="display: flex; justify-content: center; gap: 8px;">
-                                        <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                            <div style="color: #48bb78; font-weight: bold;">{bp}</div>
-                                            <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
-                                        </div>
-                                        <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                            <div style="color: #f56565; font-weight: bold;">{lp}</div>
-                                            <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
-                                        </div>
+                # Add visual indicator for odds availability
+                odds_icon = "✅" if has_odds else "⏳"
+                st.markdown(f"##### {odds_icon} {event_name}")
+                
+                if has_odds and odds_data and odds_data.get('runners'):
+                    runners = odds_data['runners']
+                    cols = st.columns(len(runners))
+                    for idx, runner in enumerate(runners):
+                        with cols[idx]:
+                            name = runner.get('name', f'Team {idx+1}')
+                            back = runner.get('back', [{}])
+                            lay = runner.get('lay', [{}])
+                            bp = back[0].get('price', '-') if back else '-'
+                            bs = back[0].get('size', 0) if back else 0
+                            lp = lay[0].get('price', '-') if lay else '-'
+                            ls = lay[0].get('size', 0) if lay else 0
+                            st.markdown(f'''
+                            <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
+                                <div style="display: flex; justify-content: center; gap: 8px;">
+                                    <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                        <div style="color: #48bb78; font-weight: bold;">{bp}</div>
+                                        <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
+                                    </div>
+                                    <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                        <div style="color: #f56565; font-weight: bold;">{lp}</div>
+                                        <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
                                     </div>
                                 </div>
-                                ''', unsafe_allow_html=True)
-                    else:
-                        st.caption("⏳ Odds loading...")
+                            </div>
+                            ''', unsafe_allow_html=True)
+                elif not has_odds:
+                    st.caption("⏳ Odds not available yet")
                 else:
-                    st.caption("No market data")
+                    st.caption("⏳ Odds loading...")
                 st.markdown("---")
 
 st.caption("Advanced Market Load Tracker • Built for live analysis")
