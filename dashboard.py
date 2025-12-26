@@ -1,5 +1,5 @@
 """
-Advanced Market Load Tracker - Clean Modern Dashboard
+Advanced Market Load Tracker - Modern Dynamic Dashboard
 """
 import streamlit as st
 import requests
@@ -10,18 +10,278 @@ from token_manager import get_valid_token
 st.set_page_config(
     page_title="Advanced Market Load Tracker",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
+# Modern Dark Theme CSS
 st.markdown("""
 <style>
-    .stApp {background:#fff}
-    [data-testid="stHeader"] {background:#fff}
-    .block-container {padding-top:2rem}
-    div[data-testid="stMetric"] {background:#f8f9fa;padding:12px;border-radius:8px}
-    #MainMenu {visibility:hidden}
-    footer {visibility:hidden}
-    .stDeployButton {display:none}
+    /* Dark theme base */
+    .stApp {
+        background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    }
+    [data-testid="stHeader"] {
+        background: transparent;
+    }
+    
+    /* Main container */
+    .block-container {
+        padding: 1rem 2rem;
+        max-width: 1400px;
+    }
+    
+    /* Header styling */
+    .main-title {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .sub-title {
+        color: #a0aec0;
+        text-align: center;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* Sport cards */
+    .sport-card {
+        background: linear-gradient(145deg, #1e1e2f 0%, #2d2d44 100%);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 16px;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .sport-card:hover {
+        transform: translateY(-4px);
+        border-color: #667eea;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    .sport-card.active {
+        background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+        border-color: transparent;
+    }
+    .sport-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .sport-name {
+        color: #e2e8f0;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    /* Event cards */
+    .event-card {
+        background: linear-gradient(145deg, #1a1a2e 0%, #252542 100%);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin: 0.75rem 0;
+        transition: all 0.3s ease;
+    }
+    .event-card:hover {
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .event-name {
+        color: #f7fafc;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background: #ef4444;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+    }
+    
+    /* Odds display */
+    .odds-container {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+    .runner-card {
+        flex: 1;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    .runner-name {
+        color: #cbd5e0;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+    .odds-row {
+        display: flex;
+        gap: 8px;
+    }
+    .back-box {
+        flex: 1;
+        background: linear-gradient(145deg, #1e40af 0%, #3b82f6 100%);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+    .lay-box {
+        flex: 1;
+        background: linear-gradient(145deg, #9f1239 0%, #e11d48 100%);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+    }
+    .odds-label {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .odds-price {
+        color: #ffffff;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+    .odds-stake {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+    
+    /* Stats panel */
+    .stats-panel {
+        background: linear-gradient(145deg, #1a1a2e 0%, #252542 100%);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    .stats-title {
+        color: #a78bfa;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .stat-item {
+        background: rgba(255,255,255,0.03);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        text-align: center;
+    }
+    .stat-value {
+        color: #f7fafc;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .stat-label {
+        color: #a0aec0;
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    .stButton > button[kind="secondary"] {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Text colors */
+    h1, h2, h3, p, span, label {
+        color: #e2e8f0 !important;
+    }
+    .stMarkdown {
+        color: #e2e8f0;
+    }
+    
+    /* Metric styling */
+    div[data-testid="stMetric"] {
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+    }
+    div[data-testid="stMetric"] label {
+        color: #a0aec0 !important;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #f7fafc !important;
+        font-size: 1.8rem !important;
+    }
+    
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.03) !important;
+        border-radius: 12px !important;
+        color: #e2e8f0 !important;
+    }
+    .streamlit-expanderContent {
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: 0 0 12px 12px !important;
+    }
+    
+    /* Checkbox */
+    .stCheckbox label span {
+        color: #a0aec0 !important;
+    }
+    
+    /* Divider */
+    hr {
+        border-color: rgba(255,255,255,0.1) !important;
+    }
+    
+    /* Hide streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stDeployButton {display: none;}
+    
+    /* Info box */
+    .stAlert {
+        background: rgba(59, 130, 246, 0.1) !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-radius: 12px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,7 +316,7 @@ def fetch_events(sport_id):
             if data.get("status") and "data" in data:
                 return data["data"]
         return []
-    except Exception as e:
+    except:
         return []
 
 
@@ -81,91 +341,159 @@ def format_stake(val):
 
 
 # Header
-st.markdown("## 📊 Advanced Market Load Tracker")
-st.caption("Real-time odds monitoring")
+st.markdown('<div class="main-title">📊 Advanced Market Load Tracker</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Real-time odds monitoring & market analysis</div>', unsafe_allow_html=True)
 
-# Initialize
+# Initialize state
 if 'sport' not in st.session_state:
     st.session_state.sport = 4
 
-# Sport selector
-st.markdown("### Select Sport")
+# Sport Selection
+st.markdown("### 🎯 Select Sport")
 sport_cols = st.columns(len(SPORTS))
 for i, sport in enumerate(SPORTS):
     with sport_cols[i]:
-        btn = st.button(
+        is_active = st.session_state.sport == sport['id']
+        if st.button(
             f"{sport['icon']} {sport['name']}", 
-            key=f"s{sport['id']}",
+            key=f"sport_{sport['id']}",
             use_container_width=True,
-            type="primary" if st.session_state.sport == sport['id'] else "secondary"
-        )
-        if btn:
+            type="primary" if is_active else "secondary"
+        ):
             st.session_state.sport = sport['id']
             st.rerun()
 
-st.divider()
+st.markdown("---")
 
-# Get sport info
+# Get current sport info
 sport_id = st.session_state.sport
 sport_name = next((s['name'] for s in SPORTS if s['id'] == sport_id), "Cricket")
 sport_icon = next((s['icon'] for s in SPORTS if s['id'] == sport_id), "🏏")
 
-# Layout
-left, right = st.columns([3, 1])
+# Main Layout
+main_col, stats_col = st.columns([3, 1])
 
-with right:
-    st.markdown("### 📈 Stats")
-    refresh = st.button("🔄 Refresh", use_container_width=True)
-    if refresh:
+# Stats Panel (Right)
+with stats_col:
+    st.markdown("""
+    <div class="stats-panel">
+        <div class="stats-title">📈 Dashboard Stats</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Refresh button
+    if st.button("🔄 Refresh Data", use_container_width=True):
         st.rerun()
-    auto = st.checkbox("Auto-refresh (30s)")
-    st.markdown(f"**Last update:** {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Auto refresh
+    auto_refresh = st.checkbox("⚡ Auto-refresh (30s)")
+    
+    # Current time
+    st.markdown(f"""
+    <div class="stat-item">
+        <div class="stat-label">Last Updated</div>
+        <div style="color: #a78bfa; font-size: 1.2rem; font-weight: 600;">
+            {datetime.now().strftime('%H:%M:%S')}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Selected sport
+    st.markdown(f"""
+    <div class="stat-item">
+        <div style="font-size: 2rem;">{sport_icon}</div>
+        <div class="stat-label">Current Sport</div>
+        <div style="color: #f7fafc; font-weight: 600;">{sport_name}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-with left:
+# Events Panel (Left)
+with main_col:
     st.markdown(f"### {sport_icon} Live {sport_name} Events")
     
-    events = fetch_events(sport_id)
+    # Fetch events
+    with st.spinner("Loading events..."):
+        events = fetch_events(sport_id)
     
     if not events:
-        st.info(f"No live {sport_name.lower()} events right now")
+        st.markdown("""
+        <div class="event-card" style="text-align: center; padding: 3rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🏟️</div>
+            <div style="color: #a0aec0; font-size: 1.1rem;">No live events right now</div>
+            <div style="color: #718096; font-size: 0.9rem; margin-top: 0.5rem;">Check back later or select another sport</div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.metric("Live Events", len(events))
+        # Event count metric
+        st.metric("🔴 Live Events", len(events))
         
-        for event in events[:15]:
-            name = event.get('event_name', 'Unknown')
-            eid = event.get('event_id', '')
-            mid = event.get('market_id', '')
+        for event in events[:12]:
+            event_name = event.get('event_name', 'Unknown Event')
+            event_id = event.get('event_id', '')
+            market_id = event.get('market_id', '')
             
-            with st.expander(f"🔴 {name}", expanded=False):
-                if mid:
-                    odds = fetch_odds(eid, mid)
-                    if odds and 'runners' in odds:
-                        runners = odds['runners']
-                        cols = st.columns(len(runners))
+            # Event card using expander
+            with st.expander(f"🔴 {event_name}", expanded=False):
+                if market_id:
+                    odds_data = fetch_odds(event_id, market_id)
+                    
+                    if odds_data and 'runners' in odds_data:
+                        runners = odds_data['runners']
+                        runner_cols = st.columns(len(runners))
+                        
                         for idx, runner in enumerate(runners):
-                            with cols[idx]:
-                                rname = runner.get('name', f'Team {idx+1}')
-                                backs = runner.get('back', [{}])
-                                lays = runner.get('lay', [{}])
+                            with runner_cols[idx]:
+                                runner_name = runner.get('name', f'Team {idx+1}')
+                                back_prices = runner.get('back', [{}])
+                                lay_prices = runner.get('lay', [{}])
                                 
-                                bp = backs[0].get('price', '-') if backs else '-'
-                                bs = backs[0].get('size', 0) if backs else 0
-                                lp = lays[0].get('price', '-') if lays else '-'
-                                ls = lays[0].get('size', 0) if lays else 0
+                                back_price = back_prices[0].get('price', '-') if back_prices else '-'
+                                back_size = back_prices[0].get('size', 0) if back_prices else 0
+                                lay_price = lay_prices[0].get('price', '-') if lay_prices else '-'
+                                lay_size = lay_prices[0].get('size', 0) if lay_prices else 0
                                 
-                                st.markdown(f"**{rname[:20]}**")
-                                c1, c2 = st.columns(2)
-                                with c1:
-                                    st.markdown(f"🔵 Back: **{bp}**")
-                                    st.caption(format_stake(bs))
-                                with c2:
-                                    st.markdown(f"🔴 Lay: **{lp}**")
-                                    st.caption(format_stake(ls))
+                                # Runner card HTML
+                                st.markdown(f"""
+                                <div class="runner-card">
+                                    <div class="runner-name">{runner_name[:25]}</div>
+                                    <div class="odds-row">
+                                        <div class="back-box">
+                                            <div class="odds-label">Back</div>
+                                            <div class="odds-price">{back_price}</div>
+                                            <div class="odds-stake">{format_stake(back_size)}</div>
+                                        </div>
+                                        <div class="lay-box">
+                                            <div class="odds-label">Lay</div>
+                                            <div class="odds-price">{lay_price}</div>
+                                            <div class="odds-stake">{format_stake(lay_size)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
                     else:
-                        st.caption("Loading odds...")
+                        st.markdown("""
+                        <div style="text-align: center; padding: 1rem; color: #718096;">
+                            ⏳ Loading odds data...
+                        </div>
+                        """, unsafe_allow_html=True)
                 else:
-                    st.caption("No market data")
+                    st.markdown("""
+                    <div style="text-align: center; padding: 1rem; color: #718096;">
+                        📊 No market data available
+                    </div>
+                    """, unsafe_allow_html=True)
 
-if auto:
+# Auto refresh logic
+if auto_refresh:
     time.sleep(30)
     st.rerun()
+
+# Footer
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; padding: 1rem;">
+    <span style="color: #4a5568; font-size: 0.8rem;">
+        Advanced Market Load Tracker • Built for real-time analysis
+    </span>
+</div>
+""", unsafe_allow_html=True)
