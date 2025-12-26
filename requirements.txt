@@ -1,3 +1,4 @@
 # Minimal, pinned dependencies for deployment
 streamlit==1.50.0
 requests==2.32.5
+streamlit-autorefresh==1.0.1

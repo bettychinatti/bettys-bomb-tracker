@@ -6,6 +6,7 @@ import requests
 import time
 from datetime import datetime
 from token_manager import get_valid_token
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
     page_title="Advanced Market Load Tracker",
@@ -441,6 +442,10 @@ sport_id = st.session_state.sport
 sport_name = next((s['name'] for s in SPORTS if s['id'] == sport_id), "Cricket")
 sport_icon = next((s['icon'] for s in SPORTS if s['id'] == sport_id), "🏏")
 
+# Real-time auto-refresh for odds (500ms = 0.5 seconds)
+# This runs every 500ms to update odds in real-time
+count = st_autorefresh(interval=500, limit=None, key="odds_refresh")
+
 # Main Layout
 main_col, stats_col = st.columns([3, 1])
 
@@ -456,15 +461,20 @@ with stats_col:
     if st.button("🔄 Refresh Data", use_container_width=True):
         st.rerun()
     
-    # Auto refresh
-    auto_refresh = st.checkbox("⚡ Auto-refresh (30s)")
+    # Show refresh count
+    st.markdown(f"""
+    <div style="text-align: center; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; margin: 0.5rem 0;">
+        <span style="color: #10b981; font-size: 0.8rem;">🔴 LIVE</span>
+        <span style="color: #a0aec0; font-size: 0.75rem;"> • Updates every 0.5s</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Current time
     st.markdown(f"""
     <div class="stat-item">
         <div class="stat-label">Last Updated</div>
         <div style="color: #a78bfa; font-size: 1.2rem; font-weight: 600;">
-            {datetime.now().strftime('%H:%M:%S')}
+            {datetime.now().strftime('%H:%M:%S.%f')[:-3]}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -572,17 +582,12 @@ with main_col:
                         </div>
                         """, unsafe_allow_html=True)
 
-# Auto refresh logic
-if auto_refresh:
-    time.sleep(30)
-    st.rerun()
-
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 1rem;">
     <span style="color: #4a5568; font-size: 0.8rem;">
-        Advanced Market Load Tracker • Built for real-time analysis
+        Advanced Market Load Tracker • Real-time odds (500ms refresh) • Built for live analysis
     </span>
 </div>
 """, unsafe_allow_html=True)
