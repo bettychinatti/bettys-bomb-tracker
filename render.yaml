@@ -1,16 +1,15 @@
-# Render.com FREE tier deployment configuration for Betty's Bomb Tracker
-# Total cost: $0/month with external keep-alive pinger
+# Render.com FREE tier deployment configuration
+# Simple odds tracker - no database needed
 
 services:
   - type: web
     name: bettys-bomb-tracker
     env: docker
-    plan: free  # Changed from starter to FREE tier
-    region: singapore  # Closest to India for low latency
+    plan: free
+    region: singapore
     autoDeploy: true
     healthCheckPath: /
     
-    # Environment variables
     envVars:
       - key: PORT
         value: 8501
@@ -18,20 +17,3 @@ services:
         value: true
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: false
-    
-    # Persistent disk for SQLite database (FREE tier: 1GB included)
-    # Note: Disks must be created manually in Render dashboard first!
-    # Go to: Dashboard → Service → Disks → Add Disk
-    # Name: tracker-data, Mount Path: /data, Size: 1 GB
-    # Then Render will automatically mount it at /data
-    disks:
-      - name: tracker-data
-        mountPath: /data
-        sizeGB: 1
-    
-    # FREE TIER NOTES:
-    # - Sleeps after 15 minutes of inactivity
-    # - Wakes up automatically on HTTP request (3-5 second delay)
-    # - Solution: Use cron-job.org to ping every 10 minutes (keeps it awake 24/7)
-    # - 750 hours/month free (31 days = 744 hours, perfect!)
-    # - If you need truly always-on: $7/month (still cheaper than Fly.io)
