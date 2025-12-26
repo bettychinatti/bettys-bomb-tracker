@@ -5,25 +5,32 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from persistence import init_db, get_conn, upsert_market, upsert_team_labels, increment_cumulative
 
-EVENTS_API = "https://api.d99hub.com/api/guest/event_list"
-MARKET_API = "https://odds.o99hub.com/ws/getMarketDataNew"
+# Use authenticated client endpoints (not guest endpoints)
+EVENTS_API = "https://api.d99exch.com/api/client/event_list"
+MARKET_API = "https://odds.o99exch.com/ws/getMarketDataNew"
 
-# Enhanced headers to mimic real browser and avoid IP blocking
+# Bearer token for API authentication
+# IMPORTANT: Replace this with your actual token from browser network inspector
+# Token expires every ~5 hours, so update regularly
+BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+
+# Enhanced headers matching real browser requests
 HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
     "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Origin": "https://gin247.net",
-    "Referer": "https://gin247.net/inplay",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    "sec-ch-ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
+    "Authorization": f"bearer {BEARER_TOKEN}",  # Authentication required
+    "Origin": "https://99exch.com",
+    "Referer": "https://99exch.com/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
     "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
+    "sec-ch-ua-platform": '"macOS"',
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "cross-site",
-    "Connection": "keep-alive",
+    "priority": "u=1, i",
 }
 
 SPORT_MAP = {1: "Soccer", 2: "Tennis", 4: "Cricket"}
