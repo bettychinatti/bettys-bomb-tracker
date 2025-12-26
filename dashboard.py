@@ -302,14 +302,13 @@ SPORTS = [
     {"id": 1, "name": "Soccer", "icon": "⚽"},
     {"id": 2, "name": "Tennis", "icon": "🎾"},
     {"id": 7, "name": "Horse Racing", "icon": "🏇"},
-    {"id": 4339, "name": "Kabaddi", "icon": "🤼"},
 ]
 
 
-def fetch_events(sport_id):
-    """Fetch live events for a sport using GET request."""
+def fetch_all_events():
+    """Fetch all live events from the API."""
     try:
-        url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
+        url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
         headers = {
             "accept": "application/json, text/plain, */*",
             "origin": "https://d99exch.com",
@@ -323,8 +322,12 @@ def fetch_events(sport_id):
             return [e for e in events if e.get("in_play") == 1]
         return []
     except Exception as e:
-        st.error(f"API Error: {e}")
         return []
+
+
+def get_events_by_sport(all_events, sport_id):
+    """Filter events by sport using event_type_id."""
+    return [e for e in all_events if e.get("event_type_id") == sport_id]
 
 
 def fetch_odds(event_id, market_id):
@@ -477,23 +480,24 @@ with stats_col:
 
 # Events Panel (Left)
 with main_col:
-    st.markdown(f"### {sport_icon} Live {sport_name} Events")
+    st.markdown(f"### {sport_icon} Live {sport_name} Matches")
     
-    # Fetch events
-    with st.spinner("Loading events..."):
-        events = fetch_events(sport_id)
+    # Fetch ALL events once, then filter by sport
+    with st.spinner("Loading live matches..."):
+        all_events = fetch_all_events()
+        events = get_events_by_sport(all_events, sport_id)
     
     if not events:
-        st.markdown("""
+        st.markdown(f"""
         <div class="event-card" style="text-align: center; padding: 3rem;">
             <div style="font-size: 3rem; margin-bottom: 1rem;">🏟️</div>
-            <div style="color: #a0aec0; font-size: 1.1rem;">No live events right now</div>
+            <div style="color: #a0aec0; font-size: 1.1rem;">No live {sport_name} matches right now</div>
             <div style="color: #718096; font-size: 0.9rem; margin-top: 0.5rem;">Check back later or select another sport</div>
         </div>
         """, unsafe_allow_html=True)
     else:
         # Event count metric
-        st.metric("🔴 Live Events", len(events))
+        st.metric("🔴 Live Matches", len(events))
         
         # Group events by competition
         competitions = {}
@@ -503,16 +507,16 @@ with main_col:
                 competitions[comp] = []
             competitions[comp].append(event)
         
-        # Display by competition
+        # Display by competition/tournament
         for comp_name, comp_events in competitions.items():
             st.markdown(f"""
             <div style="background: rgba(102, 126, 234, 0.1); padding: 8px 16px; border-radius: 8px; margin: 16px 0 8px 0;">
                 <span style="color: #a78bfa; font-weight: 600;">🏆 {comp_name}</span>
-                <span style="color: #718096; font-size: 0.85rem; margin-left: 8px;">({len(comp_events)} events)</span>
+                <span style="color: #718096; font-size: 0.85rem; margin-left: 8px;">({len(comp_events)} matches)</span>
             </div>
             """, unsafe_allow_html=True)
             
-            for event in comp_events[:8]:  # Max 8 events per competition
+            for event in comp_events[:10]:  # Max 10 events per competition
                 event_name = event.get('name', 'Unknown Event')
                 event_id = event.get('event_id', '')
                 market_id = event.get('market_id', '')
