@@ -59,26 +59,29 @@ SPORTS = [
 ]
 
 @st.cache_data(ttl=5)
-def fetch_all_events():
-    """Fetch all live events from all sports"""
+def fetch_events_by_sport(sport_id):
+    """Fetch live events for a specific sport"""
     try:
         headers = {"accept": "application/json", "origin": "https://d99exch.com", "referer": "https://d99exch.com/"}
-        all_live_events = []
-        # Fetch events for all sports
-        for sport in SPORTS:
-            url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport['id']}"
-            resp = requests.get(url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                events = data.get("data", {}).get("events", [])
-                live_events = [e for e in events if e.get("in_play") == 1]
-                all_live_events.extend(live_events)
-        return all_live_events
+        url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            events = data.get("data", {}).get("events", [])
+            # Return only live events and remove duplicates by market_id
+            live_events = [e for e in events if e.get("in_play") == 1]
+            # Deduplicate by market_id
+            seen_markets = set()
+            unique_events = []
+            for event in live_events:
+                market_id = event.get("market_id")
+                if market_id and market_id not in seen_markets:
+                    seen_markets.add(market_id)
+                    unique_events.append(event)
+            return unique_events
+        return []
     except:
         return []
-
-def get_events_by_sport(all_events, sport_id):
-    return [e for e in all_events if e.get("event_type_id") == sport_id]
 
 def fetch_odds(market_id, event_name=""):
     try:
@@ -174,8 +177,7 @@ with col2:
 
 with col1:
     st.markdown(f"### {sport_info['icon']} Live {sport_info['name']} Matches")
-    all_events = fetch_all_events()
-    events = get_events_by_sport(all_events, sport_id)
+    events = fetch_events_by_sport(sport_id)
     
     if not events:
         st.info(f"No live {sport_info['name']} matches right now. Try another sport!")
