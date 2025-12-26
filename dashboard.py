@@ -495,61 +495,78 @@ with main_col:
         # Event count metric
         st.metric("🔴 Live Events", len(events))
         
-        for event in events[:12]:
-            event_name = event.get('event_name', 'Unknown Event')
-            event_id = event.get('event_id', '')
-            market_id = event.get('market_id', '')
+        # Group events by competition
+        competitions = {}
+        for event in events:
+            comp = event.get('competition_name', 'Other')
+            if comp not in competitions:
+                competitions[comp] = []
+            competitions[comp].append(event)
+        
+        # Display by competition
+        for comp_name, comp_events in competitions.items():
+            st.markdown(f"""
+            <div style="background: rgba(102, 126, 234, 0.1); padding: 8px 16px; border-radius: 8px; margin: 16px 0 8px 0;">
+                <span style="color: #a78bfa; font-weight: 600;">🏆 {comp_name}</span>
+                <span style="color: #718096; font-size: 0.85rem; margin-left: 8px;">({len(comp_events)} events)</span>
+            </div>
+            """, unsafe_allow_html=True)
             
-            # Event card using expander
-            with st.expander(f"🔴 {event_name}", expanded=False):
-                if market_id:
-                    odds_data = fetch_odds(event_id, market_id)
-                    
-                    if odds_data and 'runners' in odds_data:
-                        runners = odds_data['runners']
-                        runner_cols = st.columns(len(runners))
+            for event in comp_events[:8]:  # Max 8 events per competition
+                event_name = event.get('name', 'Unknown Event')
+                event_id = event.get('event_id', '')
+                market_id = event.get('market_id', '')
+                
+                # Event card using expander
+                with st.expander(f"🔴 {event_name}", expanded=False):
+                    if market_id:
+                        odds_data = fetch_odds(event_id, market_id)
                         
-                        for idx, runner in enumerate(runners):
-                            with runner_cols[idx]:
-                                runner_name = runner.get('name', f'Team {idx+1}')
-                                back_prices = runner.get('back', [{}])
-                                lay_prices = runner.get('lay', [{}])
-                                
-                                back_price = back_prices[0].get('price', '-') if back_prices else '-'
-                                back_size = back_prices[0].get('size', 0) if back_prices else 0
-                                lay_price = lay_prices[0].get('price', '-') if lay_prices else '-'
-                                lay_size = lay_prices[0].get('size', 0) if lay_prices else 0
-                                
-                                # Runner card HTML
-                                st.markdown(f"""
-                                <div class="runner-card">
-                                    <div class="runner-name">{runner_name[:25]}</div>
-                                    <div class="odds-row">
-                                        <div class="back-box">
-                                            <div class="odds-label">Back</div>
-                                            <div class="odds-price">{back_price}</div>
-                                            <div class="odds-stake">{format_stake(back_size)}</div>
-                                        </div>
-                                        <div class="lay-box">
-                                            <div class="odds-label">Lay</div>
-                                            <div class="odds-price">{lay_price}</div>
-                                            <div class="odds-stake">{format_stake(lay_size)}</div>
+                        if odds_data and 'runners' in odds_data:
+                            runners = odds_data['runners']
+                            runner_cols = st.columns(len(runners))
+                            
+                            for idx, runner in enumerate(runners):
+                                with runner_cols[idx]:
+                                    runner_name = runner.get('name', f'Team {idx+1}')
+                                    back_prices = runner.get('back', [{}])
+                                    lay_prices = runner.get('lay', [{}])
+                                    
+                                    back_price = back_prices[0].get('price', '-') if back_prices else '-'
+                                    back_size = back_prices[0].get('size', 0) if back_prices else 0
+                                    lay_price = lay_prices[0].get('price', '-') if lay_prices else '-'
+                                    lay_size = lay_prices[0].get('size', 0) if lay_prices else 0
+                                    
+                                    # Runner card HTML
+                                    st.markdown(f"""
+                                    <div class="runner-card">
+                                        <div class="runner-name">{runner_name[:25]}</div>
+                                        <div class="odds-row">
+                                            <div class="back-box">
+                                                <div class="odds-label">Back</div>
+                                                <div class="odds-price">{back_price}</div>
+                                                <div class="odds-stake">{format_stake(back_size)}</div>
+                                            </div>
+                                            <div class="lay-box">
+                                                <div class="odds-label">Lay</div>
+                                                <div class="odds-price">{lay_price}</div>
+                                                <div class="odds-stake">{format_stake(lay_size)}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                    """, unsafe_allow_html=True)
+                        else:
+                            st.markdown("""
+                            <div style="text-align: center; padding: 1rem; color: #718096;">
+                                ⏳ Loading odds data...
+                            </div>
+                            """, unsafe_allow_html=True)
                     else:
                         st.markdown("""
                         <div style="text-align: center; padding: 1rem; color: #718096;">
-                            ⏳ Loading odds data...
+                            📊 No market data available
                         </div>
                         """, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div style="text-align: center; padding: 1rem; color: #718096;">
-                        📊 No market data available
-                    </div>
-                    """, unsafe_allow_html=True)
 
 # Auto refresh logic
 if auto_refresh:
