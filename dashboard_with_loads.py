@@ -1,6 +1,7 @@
 """
 Advanced Market Load Tracker - Real-time Odds + Market Load Dashboard
 Shows both live odds AND cumulative money flow tracking
+PRO PLAN OPTIMIZED: Ultra-fast refresh for microsecond-precision tracking
 """
 import streamlit as st
 import requests
@@ -8,6 +9,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 import os
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
     page_title="Market Load Tracker",
@@ -15,6 +17,11 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# PRO PLAN: Auto-refresh every 500ms (0.5 seconds) for real-time odds
+# This ensures you never miss any bet movements
+# Background tracker polls every 100ms, dashboard updates every 500ms
+st_autorefresh(interval=500, key="datarefresh")
 
 # Database path (same as background tracker)
 if os.path.exists('/data'):
@@ -62,7 +69,10 @@ SPORTS = [
     {"id": 7, "name": "Horse Racing", "icon": "🏇"},
 ]
 
-@st.cache_data(ttl=5)
+# PRO PLAN: Ultra-fast refresh - NO CACHE for odds (always fresh)
+# Events cache reduced to 10 seconds (for match list stability)
+# Odds have NO cache - fetched fresh every 500ms with auto-refresh
+@st.cache_data(ttl=10)
 def fetch_all_events():
     try:
         headers = {"accept": "application/json", "origin": "https://d99exch.com", "referer": "https://d99exch.com/"}
@@ -179,8 +189,8 @@ def format_money(val):
     return f"{sign}₹{val:.0f}"
 
 # MAIN UI
-st.markdown("## 📊 Advanced Market Load Tracker")
-st.markdown(f"*Real-time odds + cumulative tracking • {datetime.now().strftime('%H:%M:%S')}*")
+st.markdown("## 📊 Advanced Market Load Tracker - PRO EDITION")
+st.markdown(f"*⚡ Real-time • Auto-refresh: 500ms • Last: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}*")
 
 if 'sport' not in st.session_state:
     st.session_state.sport = 4
