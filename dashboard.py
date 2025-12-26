@@ -307,27 +307,95 @@ SPORTS = [
 
 
 def fetch_events(sport_id):
+    """Fetch live events for a sport using GET request."""
     try:
-        url = "https://api.d99exch.com/api/client/event_list"
-        payload = {"sport_id": sport_id, "is_inplay": True}
-        resp = requests.post(url, json=payload, headers=get_headers(), timeout=10)
+        url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "origin": "https://d99exch.com",
+            "referer": "https://d99exch.com/",
+        }
+        resp = requests.get(url, headers=headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
-            if data.get("status") and "data" in data:
-                return data["data"]
+            events = data.get("data", {}).get("events", [])
+            # Filter to only in-play events
+            return [e for e in events if e.get("in_play") == 1]
         return []
-    except:
+    except Exception as e:
+        st.error(f"API Error: {e}")
         return []
 
 
 def fetch_odds(event_id, market_id):
+    """Fetch real-time odds using form-urlencoded POST request."""
     try:
         url = "https://odds.o99exch.com/ws/getMarketDataNew"
-        payload = {"event_id": str(event_id), "market_id": str(market_id)}
-        resp = requests.post(url, json=payload, headers=get_headers(), timeout=10)
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/x-www-form-urlencoded",
+            "origin": "https://99exch.com",
+            "referer": "https://99exch.com/",
+        }
+        data = f"market_ids[]={market_id}"
+        resp = requests.post(url, data=data, headers=headers, timeout=10)
         if resp.status_code == 200:
-            return resp.json()
+            result = resp.json()
+            if result and result[0]:
+                return parse_odds_string(result[0])
         return None
+    except:
+        return None
+
+
+def parse_odds_string(odds_str):
+    """Parse pipe-delimited odds string into structured data."""
+    try:
+        parts = odds_str.split('|')
+        runners = []
+        i = 0
+        runner_idx = 0
+        
+        while i < len(parts):
+            if parts[i] == 'ACTIVE':
+                # Found a runner - read next 12 values (6 back + 6 lay as price/size pairs)
+                back_prices = []
+                lay_prices = []
+                
+                j = i + 1
+                # Read 3 back prices
+                for _ in range(3):
+                    if j + 1 < len(parts):
+                        try:
+                            price = float(parts[j])
+                            size = float(parts[j + 1])
+                            back_prices.append({"price": price, "size": size})
+                        except:
+                            pass
+                        j += 2
+                
+                # Read 3 lay prices
+                for _ in range(3):
+                    if j + 1 < len(parts):
+                        try:
+                            price = float(parts[j])
+                            size = float(parts[j + 1])
+                            lay_prices.append({"price": price, "size": size})
+                        except:
+                            pass
+                        j += 2
+                
+                runner_idx += 1
+                runners.append({
+                    "name": f"Team {runner_idx}",
+                    "back": back_prices,
+                    "lay": lay_prices
+                })
+                i = j
+            else:
+                i += 1
+        
+        return {"runners": runners} if runners else None
     except:
         return None
 
