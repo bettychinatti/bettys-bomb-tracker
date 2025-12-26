@@ -307,31 +307,25 @@ SPORTS = [
 
 
 def fetch_all_events():
-    """Fetch all live events from ALL sports."""
-    all_events = []
-    headers = {
-        "accept": "application/json, text/plain, */*",
-        "origin": "https://d99exch.com",
-        "referer": "https://d99exch.com/",
-    }
-    
-    # Fetch from all sport IDs
-    sport_ids = [4, 1, 2, 7]  # Cricket, Soccer, Tennis, Horse Racing
-    
-    for sport_id in sport_ids:
-        try:
-            url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
-            resp = requests.get(url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                events = data.get("data", {}).get("events", [])
-                # Filter to only in-play events
-                live_events = [e for e in events if e.get("in_play") == 1]
-                all_events.extend(live_events)
-        except:
-            pass
-    
-    return all_events
+    """Fetch all live events (API returns all sports in one call)."""
+    try:
+        headers = {
+            "accept": "application/json, text/plain, */*",
+            "origin": "https://d99exch.com",
+            "referer": "https://d99exch.com/",
+        }
+        
+        # API returns ALL events regardless of sport_id parameter
+        url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            events = data.get("data", {}).get("events", [])
+            # Filter to only in-play events
+            return [e for e in events if e.get("in_play") == 1]
+        return []
+    except:
+        return []
 
 
 def get_events_by_sport(all_events, sport_id):
