@@ -18,10 +18,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# PRO PLAN: Auto-refresh every 500ms (0.5 seconds) for real-time odds
-# This ensures you never miss any bet movements
-# Background tracker polls every 100ms, dashboard updates every 500ms
-st_autorefresh(interval=500, key="datarefresh")
+# PRO PLAN: Auto-refresh every 2 seconds for smooth updates
+# Background tracker polls every 100ms (still captures everything)
+# Dashboard refreshes every 2s to avoid UI flicker
+st_autorefresh(interval=2000, key="datarefresh")
 
 # Database path (same as background tracker)
 if os.path.exists('/data'):
@@ -190,7 +190,7 @@ def format_money(val):
 
 # MAIN UI
 st.markdown("## 📊 Advanced Market Load Tracker - PRO EDITION")
-st.markdown(f"*⚡ Real-time • Auto-refresh: 500ms • Last: {datetime.now().strftime('%H:%M:%S.%f')[:-3]}*")
+st.markdown(f"*⚡ Real-time • Auto-refresh: 2s • Last: {datetime.now().strftime('%H:%M:%S')}*")
 
 if 'sport' not in st.session_state:
     st.session_state.sport = 4
