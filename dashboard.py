@@ -60,15 +60,20 @@ SPORTS = [
 
 @st.cache_data(ttl=5)
 def fetch_all_events():
+    """Fetch all live events from all sports"""
     try:
         headers = {"accept": "application/json", "origin": "https://d99exch.com", "referer": "https://d99exch.com/"}
-        url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
-        resp = requests.get(url, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            events = data.get("data", {}).get("events", [])
-            return [e for e in events if e.get("in_play") == 1]
-        return []
+        all_live_events = []
+        # Fetch events for all sports
+        for sport in SPORTS:
+            url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport['id']}"
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("data", {}).get("events", [])
+                live_events = [e for e in events if e.get("in_play") == 1]
+                all_live_events.extend(live_events)
+        return all_live_events
     except:
         return []
 
