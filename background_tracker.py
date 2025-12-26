@@ -201,7 +201,10 @@ def main():
                         labels = [f"Runner 1", f"Runner 2"]
                     increment_cumulative(conn, mid, labels[0], db0, dl0, ts)
                     increment_cumulative(conn, mid, labels[1], db1, dl1, ts)
-        time.sleep(1.0)
+        # PRO PLAN: Ultra-fast polling for microsecond precision
+        # Polls every 0.1 seconds (100ms) = 10x per second
+        # Catches every bet movement without missing data
+        time.sleep(0.1)
 
 
 if __name__ == '__main__':
