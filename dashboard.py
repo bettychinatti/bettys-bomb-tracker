@@ -1,215 +1,26 @@
 """
-Advanced Market Load Tracker - Modern Dynamic Dashboard
+Advanced Market Load Tracker - Real-time Odds Dashboard
 """
 import streamlit as st
 import requests
-import time
 from datetime import datetime
-from token_manager import get_valid_token
-from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
-    page_title="Advanced Market Load Tracker",
+    page_title="Market Load Tracker",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Modern Dark Theme CSS
+# Dark Theme CSS
 st.markdown("""
 <style>
-    /* Dark theme base */
     .stApp {
         background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
     }
-    [data-testid="stHeader"] {
-        background: transparent;
-    }
-    
-    /* Main container */
-    .block-container {
-        padding: 1rem 2rem;
-        max-width: 1400px;
-    }
-    
-    /* Header styling */
-    .main-title {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 2.5rem;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-    .sub-title {
-        color: #a0aec0;
-        text-align: center;
-        font-size: 1rem;
-        margin-bottom: 2rem;
-    }
-    
-    /* Sport cards */
-    .sport-card {
-        background: linear-gradient(145deg, #1e1e2f 0%, #2d2d44 100%);
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        border-radius: 16px;
-        padding: 1rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    .sport-card:hover {
-        transform: translateY(-4px);
-        border-color: #667eea;
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-    }
-    .sport-card.active {
-        background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
-        border-color: transparent;
-    }
-    .sport-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    .sport-name {
-        color: #e2e8f0;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-    
-    /* Event cards */
-    .event-card {
-        background: linear-gradient(145deg, #1a1a2e 0%, #252542 100%);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 16px;
-        padding: 1.25rem;
-        margin: 0.75rem 0;
-        transition: all 0.3s ease;
-    }
-    .event-card:hover {
-        border-color: rgba(102, 126, 234, 0.5);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    }
-    .event-name {
-        color: #f7fafc;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    .live-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .live-dot {
-        width: 8px;
-        height: 8px;
-        background: #ef4444;
-        border-radius: 50%;
-        animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(1.2); }
-    }
-    
-    /* Odds display */
-    .odds-container {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-    .runner-card {
-        flex: 1;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 12px;
-        padding: 1rem;
-    }
-    .runner-name {
-        color: #cbd5e0;
-        font-weight: 600;
-        font-size: 0.9rem;
-        margin-bottom: 0.75rem;
-        text-align: center;
-    }
-    .odds-row {
-        display: flex;
-        gap: 8px;
-    }
-    .back-box {
-        flex: 1;
-        background: linear-gradient(145deg, #1e40af 0%, #3b82f6 100%);
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-    }
-    .lay-box {
-        flex: 1;
-        background: linear-gradient(145deg, #9f1239 0%, #e11d48 100%);
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-    }
-    .odds-label {
-        color: rgba(255,255,255,0.7);
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .odds-price {
-        color: #ffffff;
-        font-size: 1.4rem;
-        font-weight: 700;
-    }
-    .odds-stake {
-        color: rgba(255,255,255,0.6);
-        font-size: 0.7rem;
-        margin-top: 2px;
-    }
-    
-    /* Stats panel */
-    .stats-panel {
-        background: linear-gradient(145deg, #1a1a2e 0%, #252542 100%);
-        border: 1px solid rgba(102, 126, 234, 0.2);
-        border-radius: 16px;
-        padding: 1.5rem;
-    }
-    .stats-title {
-        color: #a78bfa;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .stat-item {
-        background: rgba(255,255,255,0.03);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        text-align: center;
-    }
-    .stat-value {
-        color: #f7fafc;
-        font-size: 2rem;
-        font-weight: 700;
-    }
-    .stat-label {
-        color: #a0aec0;
-        font-size: 0.8rem;
-        margin-top: 4px;
-    }
-    
-    /* Buttons */
+    [data-testid="stHeader"] { background: transparent; }
+    .block-container { padding: 1rem 2rem; max-width: 1400px; }
+    h1, h2, h3, h4, h5, p, span, label, .stMarkdown { color: #e2e8f0 !important; }
     .stButton > button {
         background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -217,7 +28,6 @@ st.markdown("""
         border-radius: 12px;
         padding: 0.75rem 1.5rem;
         font-weight: 600;
-        transition: all 0.3s ease;
     }
     .stButton > button:hover {
         transform: translateY(-2px);
@@ -227,202 +37,99 @@ st.markdown("""
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.1);
     }
-    
-    /* Text colors */
-    h1, h2, h3, p, span, label {
-        color: #e2e8f0 !important;
-    }
-    .stMarkdown {
-        color: #e2e8f0;
-    }
-    
-    /* Metric styling */
     div[data-testid="stMetric"] {
         background: rgba(102, 126, 234, 0.1);
         border: 1px solid rgba(102, 126, 234, 0.2);
         border-radius: 12px;
         padding: 1rem;
     }
-    div[data-testid="stMetric"] label {
-        color: #a0aec0 !important;
-    }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #f7fafc !important;
-        font-size: 1.8rem !important;
-    }
-    
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background: rgba(255,255,255,0.03) !important;
-        border-radius: 12px !important;
-        color: #e2e8f0 !important;
-    }
-    .streamlit-expanderContent {
-        background: rgba(255,255,255,0.02) !important;
-        border-radius: 0 0 12px 12px !important;
-    }
-    
-    /* Checkbox */
-    .stCheckbox label span {
-        color: #a0aec0 !important;
-    }
-    
-    /* Divider */
-    hr {
-        border-color: rgba(255,255,255,0.1) !important;
-    }
-    
-    /* Hide streamlit elements */
+    div[data-testid="stMetric"] label { color: #a0aec0 !important; }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #f7fafc !important; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
-    
-    /* Info box */
-    .stAlert {
-        background: rgba(59, 130, 246, 0.1) !important;
-        border: 1px solid rgba(59, 130, 246, 0.3) !important;
-        border-radius: 12px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
-
-
-def get_headers():
-    token = get_valid_token()
-    return {
-        "accept": "application/json, text/plain, */*",
-        "authorization": f"Bearer {token}" if token else "",
-        "content-type": "application/json",
-        "origin": "https://d99exch.com",
-        "referer": "https://d99exch.com/",
-    }
-
 
 SPORTS = [
     {"id": 4, "name": "Cricket", "icon": "🏏"},
     {"id": 1, "name": "Soccer", "icon": "⚽"},
-    {"id": 2, "name": "Tennis", "icon": "🎾"},
+    {"id": 2, "name": "Tennis", "icon": "��"},
     {"id": 7, "name": "Horse Racing", "icon": "🏇"},
 ]
 
-
+@st.cache_data(ttl=5)
 def fetch_all_events():
-    """Fetch all live events (API returns all sports in one call)."""
     try:
-        headers = {
-            "accept": "application/json, text/plain, */*",
-            "origin": "https://d99exch.com",
-            "referer": "https://d99exch.com/",
-        }
-        
-        # API returns ALL events regardless of sport_id parameter
+        headers = {"accept": "application/json", "origin": "https://d99exch.com", "referer": "https://d99exch.com/"}
         url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
         resp = requests.get(url, headers=headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             events = data.get("data", {}).get("events", [])
-            # Filter to only in-play events
             return [e for e in events if e.get("in_play") == 1]
         return []
     except:
         return []
 
-
 def get_events_by_sport(all_events, sport_id):
-    """Filter events by sport using event_type_id."""
     return [e for e in all_events if e.get("event_type_id") == sport_id]
 
-
-def fetch_odds(event_id, market_id, event_name=""):
-    """Fetch real-time odds using form-urlencoded POST request."""
+def fetch_odds(market_id, event_name=""):
     try:
         url = "https://odds.o99exch.com/ws/getMarketDataNew"
-        headers = {
-            "accept": "application/json, text/plain, */*",
-            "content-type": "application/x-www-form-urlencoded",
-            "origin": "https://99exch.com",
-            "referer": "https://99exch.com/",
-        }
-        data = f"market_ids[]={market_id}"
-        resp = requests.post(url, data=data, headers=headers, timeout=10)
+        headers = {"content-type": "application/x-www-form-urlencoded", "origin": "https://99exch.com"}
+        resp = requests.post(url, data=f"market_ids[]={market_id}", headers=headers, timeout=5)
         if resp.status_code == 200:
             result = resp.json()
             if result and result[0]:
-                return parse_odds_string(result[0], event_name)
-        return None
+                return parse_odds(result[0], event_name)
     except:
-        return None
+        pass
+    return None
 
-
-def parse_odds_string(odds_str, event_name=""):
-    """Parse pipe-delimited odds string into structured data."""
+def parse_odds(odds_str, event_name=""):
     try:
         parts = odds_str.split('|')
         runners = []
-        i = 0
-        runner_idx = 0
-        
-        # Extract team names from event name (format: "Team A v Team B" or "Team A vs Team B")
         team_names = []
-        if event_name:
-            if ' v ' in event_name:
-                team_names = [t.strip() for t in event_name.split(' v ', 1)]
-            elif ' vs ' in event_name:
-                team_names = [t.strip() for t in event_name.split(' vs ', 1)]
+        if ' v ' in event_name:
+            team_names = [t.strip() for t in event_name.split(' v ', 1)]
+        elif ' VS ' in event_name or ' vs ' in event_name:
+            sep = ' VS ' if ' VS ' in event_name else ' vs '
+            team_names = [t.strip() for t in event_name.split(sep, 1)]
         
+        runner_idx = 0
+        i = 0
         while i < len(parts):
             if parts[i] == 'ACTIVE':
-                # Found a runner - read next 12 values (6 back + 6 lay as price/size pairs)
-                back_prices = []
-                lay_prices = []
-                
+                back_prices, lay_prices = [], []
                 j = i + 1
-                # Read 3 back prices
                 for _ in range(3):
                     if j + 1 < len(parts):
                         try:
-                            price = float(parts[j])
-                            size = float(parts[j + 1])
-                            back_prices.append({"price": price, "size": size})
+                            back_prices.append({"price": float(parts[j]), "size": float(parts[j+1])})
                         except:
                             pass
                         j += 2
-                
-                # Read 3 lay prices
                 for _ in range(3):
                     if j + 1 < len(parts):
                         try:
-                            price = float(parts[j])
-                            size = float(parts[j + 1])
-                            lay_prices.append({"price": price, "size": size})
+                            lay_prices.append({"price": float(parts[j]), "size": float(parts[j+1])})
                         except:
                             pass
                         j += 2
-                
-                # Use actual team name if available, otherwise fallback
-                if runner_idx < len(team_names):
-                    name = team_names[runner_idx]
-                else:
-                    name = f"Selection {runner_idx + 1}"
-                
+                name = team_names[runner_idx] if runner_idx < len(team_names) else f"Selection {runner_idx + 1}"
+                runners.append({"name": name, "back": back_prices, "lay": lay_prices})
                 runner_idx += 1
-                runners.append({
-                    "name": name,
-                    "back": back_prices,
-                    "lay": lay_prices
-                })
                 i = j
             else:
                 i += 1
-        
-        # Handle 3-way markets (like draw in soccer)
         if len(runners) == 3 and len(team_names) == 2:
             runners[2]['name'] = "Draw"
-        
         return {"runners": runners} if runners else None
     except:
         return None
-
 
 def format_stake(val):
     if val >= 100000:
@@ -431,105 +138,44 @@ def format_stake(val):
         return f"₹{val/1000:.1f}K"
     return f"₹{val:.0f}"
 
+# MAIN UI
+st.markdown("## 📊 Advanced Market Load Tracker")
+st.markdown(f"*Real-time odds • Last updated: {datetime.now().strftime('%H:%M:%S')}*")
 
-# Header
-st.markdown('<div class="main-title">📊 Advanced Market Load Tracker</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">Real-time odds monitoring & market analysis</div>', unsafe_allow_html=True)
-
-# Initialize state
 if 'sport' not in st.session_state:
     st.session_state.sport = 4
 
-# Sport Selection
 st.markdown("### 🎯 Select Sport")
 sport_cols = st.columns(len(SPORTS))
 for i, sport in enumerate(SPORTS):
     with sport_cols[i]:
         is_active = st.session_state.sport == sport['id']
-        if st.button(
-            f"{sport['icon']} {sport['name']}", 
-            key=f"sport_{sport['id']}",
-            use_container_width=True,
-            type="primary" if is_active else "secondary"
-        ):
+        if st.button(f"{sport['icon']} {sport['name']}", key=f"sport_{sport['id']}", use_container_width=True, type="primary" if is_active else "secondary"):
             st.session_state.sport = sport['id']
             st.rerun()
 
 st.markdown("---")
-
-# Get current sport info
 sport_id = st.session_state.sport
-sport_name = next((s['name'] for s in SPORTS if s['id'] == sport_id), "Cricket")
-sport_icon = next((s['icon'] for s in SPORTS if s['id'] == sport_id), "🏏")
+sport_info = next((s for s in SPORTS if s['id'] == sport_id), SPORTS[0])
 
-# Real-time auto-refresh for odds (500ms = 0.5 seconds)
-# This runs every 500ms to update odds in real-time
-count = st_autorefresh(interval=500, limit=None, key="odds_refresh")
+col1, col2 = st.columns([3, 1])
 
-# Main Layout
-main_col, stats_col = st.columns([3, 1])
-
-# Stats Panel (Right)
-with stats_col:
-    st.markdown("""
-    <div class="stats-panel">
-        <div class="stats-title">📈 Dashboard Stats</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Refresh button
-    if st.button("🔄 Refresh Data", use_container_width=True):
+with col2:
+    st.markdown("### 📈 Stats")
+    if st.button("🔄 Refresh", use_container_width=True):
+        st.cache_data.clear()
         st.rerun()
-    
-    # Show refresh count
-    st.markdown(f"""
-    <div style="text-align: center; padding: 0.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; margin: 0.5rem 0;">
-        <span style="color: #10b981; font-size: 0.8rem;">🔴 LIVE</span>
-        <span style="color: #a0aec0; font-size: 0.75rem;"> • Updates every 0.5s</span>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Current time
-    st.markdown(f"""
-    <div class="stat-item">
-        <div class="stat-label">Last Updated</div>
-        <div style="color: #a78bfa; font-size: 1.2rem; font-weight: 600;">
-            {datetime.now().strftime('%H:%M:%S.%f')[:-3]}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Selected sport
-    st.markdown(f"""
-    <div class="stat-item">
-        <div style="font-size: 2rem;">{sport_icon}</div>
-        <div class="stat-label">Current Sport</div>
-        <div style="color: #f7fafc; font-weight: 600;">{sport_name}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div style="background: rgba(16, 185, 129, 0.1); padding: 10px; border-radius: 8px; text-align: center;"><span style="color: #10b981;">🔴 LIVE</span></div>', unsafe_allow_html=True)
 
-# Events Panel (Left)
-with main_col:
-    st.markdown(f"### {sport_icon} Live {sport_name} Matches")
-    
-    # Fetch ALL events once, then filter by sport
-    with st.spinner("Loading live matches..."):
-        all_events = fetch_all_events()
-        events = get_events_by_sport(all_events, sport_id)
+with col1:
+    st.markdown(f"### {sport_info['icon']} Live {sport_info['name']} Matches")
+    all_events = fetch_all_events()
+    events = get_events_by_sport(all_events, sport_id)
     
     if not events:
-        st.markdown(f"""
-        <div class="event-card" style="text-align: center; padding: 3rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🏟️</div>
-            <div style="color: #a0aec0; font-size: 1.1rem;">No live {sport_name} matches right now</div>
-            <div style="color: #718096; font-size: 0.9rem; margin-top: 0.5rem;">Check back later or select another sport</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info(f"No live {sport_info['name']} matches right now. Try another sport!")
     else:
-        # Event count metric
         st.metric("🔴 Live Matches", len(events))
-        
-        # Group events by competition
         competitions = {}
         for event in events:
             comp = event.get('competition_name', 'Other')
@@ -537,77 +183,46 @@ with main_col:
                 competitions[comp] = []
             competitions[comp].append(event)
         
-        # Display by competition/tournament
         for comp_name, comp_events in competitions.items():
-            st.markdown(f"""
-            <div style="background: rgba(102, 126, 234, 0.1); padding: 8px 16px; border-radius: 8px; margin: 16px 0 8px 0;">
-                <span style="color: #a78bfa; font-weight: 600;">🏆 {comp_name}</span>
-                <span style="color: #718096; font-size: 0.85rem; margin-left: 8px;">({len(comp_events)} matches)</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            for event in comp_events[:10]:  # Max 10 events per competition
-                event_name = event.get('name', 'Unknown Event')
-                event_id = event.get('event_id', '')
+            st.markdown(f"**🏆 {comp_name}** ({len(comp_events)} matches)")
+            for event in comp_events:
+                event_name = event.get('name', 'Unknown')
                 market_id = event.get('market_id', '')
+                st.markdown(f"##### 🔴 {event_name}")
                 
-                # Event card using expander
-                with st.expander(f"🔴 {event_name}", expanded=False):
-                    if market_id:
-                        odds_data = fetch_odds(event_id, market_id, event_name)
-                        
-                        if odds_data and 'runners' in odds_data:
-                            runners = odds_data['runners']
-                            runner_cols = st.columns(len(runners))
-                            
-                            for idx, runner in enumerate(runners):
-                                with runner_cols[idx]:
-                                    runner_name = runner.get('name', f'Team {idx+1}')
-                                    back_prices = runner.get('back', [{}])
-                                    lay_prices = runner.get('lay', [{}])
-                                    
-                                    back_price = back_prices[0].get('price', '-') if back_prices else '-'
-                                    back_size = back_prices[0].get('size', 0) if back_prices else 0
-                                    lay_price = lay_prices[0].get('price', '-') if lay_prices else '-'
-                                    lay_size = lay_prices[0].get('size', 0) if lay_prices else 0
-                                    
-                                    # Runner card HTML
-                                    st.markdown(f"""
-                                    <div class="runner-card">
-                                        <div class="runner-name">{runner_name[:25]}</div>
-                                        <div class="odds-row">
-                                            <div class="back-box">
-                                                <div class="odds-label">Back</div>
-                                                <div class="odds-price">{back_price}</div>
-                                                <div class="odds-stake">{format_stake(back_size)}</div>
-                                            </div>
-                                            <div class="lay-box">
-                                                <div class="odds-label">Lay</div>
-                                                <div class="odds-price">{lay_price}</div>
-                                                <div class="odds-stake">{format_stake(lay_size)}</div>
-                                            </div>
+                if market_id:
+                    odds_data = fetch_odds(market_id, event_name)
+                    if odds_data and odds_data.get('runners'):
+                        runners = odds_data['runners']
+                        cols = st.columns(len(runners))
+                        for idx, runner in enumerate(runners):
+                            with cols[idx]:
+                                name = runner.get('name', f'Team {idx+1}')
+                                back = runner.get('back', [{}])
+                                lay = runner.get('lay', [{}])
+                                bp = back[0].get('price', '-') if back else '-'
+                                bs = back[0].get('size', 0) if back else 0
+                                lp = lay[0].get('price', '-') if lay else '-'
+                                ls = lay[0].get('size', 0) if lay else 0
+                                st.markdown(f'''
+                                <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 10px; text-align: center;">
+                                    <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">{name[:18]}</div>
+                                    <div style="display: flex; justify-content: center; gap: 8px;">
+                                        <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                            <div style="color: #48bb78; font-weight: bold;">{bp}</div>
+                                            <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
+                                        </div>
+                                        <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
+                                            <div style="color: #f56565; font-weight: bold;">{lp}</div>
+                                            <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
                                         </div>
                                     </div>
-                                    """, unsafe_allow_html=True)
-                        else:
-                            st.markdown("""
-                            <div style="text-align: center; padding: 1rem; color: #718096;">
-                                ⏳ Loading odds data...
-                            </div>
-                            """, unsafe_allow_html=True)
+                                </div>
+                                ''', unsafe_allow_html=True)
                     else:
-                        st.markdown("""
-                        <div style="text-align: center; padding: 1rem; color: #718096;">
-                            📊 No market data available
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.caption("⏳ Odds loading...")
+                else:
+                    st.caption("No market data")
+                st.markdown("---")
 
-# Footer
-st.markdown("---")
-st.markdown("""
-<div style="text-align: center; padding: 1rem;">
-    <span style="color: #4a5568; font-size: 0.8rem;">
-        Advanced Market Load Tracker • Real-time odds (500ms refresh) • Built for live analysis
-    </span>
-</div>
-""", unsafe_allow_html=True)
+st.caption("Advanced Market Load Tracker • Built for live analysis")
