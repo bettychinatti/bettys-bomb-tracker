@@ -20,10 +20,14 @@ services:
         value: false
     
     # Persistent disk for SQLite database (FREE tier: 1GB included)
-    disk:
-      name: tracker-data
-      mountPath: /data
-      sizeGB: 1
+    # Note: Disks must be created manually in Render dashboard first!
+    # Go to: Dashboard → Service → Disks → Add Disk
+    # Name: tracker-data, Mount Path: /data, Size: 1 GB
+    # Then Render will automatically mount it at /data
+    disks:
+      - name: tracker-data
+        mountPath: /data
+        sizeGB: 1
     
     # FREE TIER NOTES:
     # - Sleeps after 15 minutes of inactivity
