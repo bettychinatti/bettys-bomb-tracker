@@ -114,24 +114,20 @@ def fetch_events_by_sport(sport_id):
     try:
         headers = {"accept": "application/json", "origin": "https://d99exch.com", "referer": "https://d99exch.com/"}
         url = f"https://api.d99exch.com/api/guest/event_list?sport_id={sport_id}"
-        print(f"🔍 Fetching events for sport_id={sport_id}")
         resp = requests.get(url, headers=headers, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             events = data.get("data", {}).get("events", [])
             # Return only live events and remove duplicates by market_id
             live_events = [e for e in events if e.get("in_play") == 1]
-            # Deduplicate by market_id AND verify sport_id matches
+            # Deduplicate by market_id
             seen_markets = set()
             unique_events = []
             for event in live_events:
                 market_id = event.get("market_id")
-                event_sport_id = event.get("sport_id")
-                # Only include if sport_id matches and market_id is unique
-                if market_id and market_id not in seen_markets and event_sport_id == sport_id:
+                if market_id and market_id not in seen_markets:
                     seen_markets.add(market_id)
                     unique_events.append(event)
-            print(f"✅ Found {len(unique_events)} live matches for sport_id={sport_id}")
             return unique_events
         return []
     except Exception as e:

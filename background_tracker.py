@@ -35,31 +35,44 @@ def init_database():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Drop old table if it exists to ensure correct schema
-        cursor.execute("DROP TABLE IF EXISTS cumulative")
+        # Check if table exists and has correct schema
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='cumulative'")
+        table_exists = cursor.fetchone()
         
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS cumulative (
-                market_id TEXT NOT NULL,
-                selection_id TEXT NOT NULL,
-                team_label TEXT NOT NULL,
-                in_back REAL DEFAULT 0,
-                in_lay REAL DEFAULT 0,
-                out_back REAL DEFAULT 0,
-                out_lay REAL DEFAULT 0,
-                net_back REAL DEFAULT 0,
-                net_lay REAL DEFAULT 0,
-                last_back_stake REAL DEFAULT 0,
-                last_lay_stake REAL DEFAULT 0,
-                updated_at TEXT NOT NULL,
-                PRIMARY KEY (market_id, selection_id)
-            )
-        """)
+        if table_exists:
+            # Check if selection_id column exists
+            cursor.execute("PRAGMA table_info(cumulative)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'selection_id' not in columns:
+                print("⚠️ Old schema detected, recreating table...")
+                cursor.execute("DROP TABLE cumulative")
+                table_exists = None
         
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_cumulative_market ON cumulative(market_id)")
+        if not table_exists:
+            cursor.execute("""
+                CREATE TABLE cumulative (
+                    market_id TEXT NOT NULL,
+                    selection_id TEXT NOT NULL,
+                    team_label TEXT NOT NULL,
+                    in_back REAL DEFAULT 0,
+                    in_lay REAL DEFAULT 0,
+                    out_back REAL DEFAULT 0,
+                    out_lay REAL DEFAULT 0,
+                    net_back REAL DEFAULT 0,
+                    net_lay REAL DEFAULT 0,
+                    last_back_stake REAL DEFAULT 0,
+                    last_lay_stake REAL DEFAULT 0,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (market_id, selection_id)
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_cumulative_market ON cumulative(market_id)")
+            print(f"✅ Database table created: {DB_PATH}")
+        else:
+            print(f"✅ Database table exists: {DB_PATH}")
+        
         conn.commit()
         conn.close()
-        print(f"✅ Database initialized (fresh schema): {DB_PATH}")
         return True
     except Exception as e:
         print(f"❌ Database error: {e}")
