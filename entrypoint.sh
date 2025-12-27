@@ -1,28 +1,21 @@
-#!/bin/bash#!/usr/bin/env sh
+#!/bin/bash
+set -e
 
-set -eset -e
-
-
-
-echo "🚀 Starting Betty's Bomb Tracker..."# Start background tracker
-
-python /app/background_tracker.py &
+echo "🚀 Betty's Bomb Tracker - Ultra-Precise Tracking"
+echo "=============================================="
 
 # Start background tracker
-
-echo "📊 Starting background tracker..."# Start streamlit
-
-python3 background_tracker.py &exec streamlit run /app/dashboard.py --server.address=0.0.0.0 --server.port=${PORT:-8501}
-
+echo "📊 Starting tracker (100ms polling)..."
+python3 /app/background_tracker.py &
 TRACKER_PID=$!
-echo "✅ Background tracker started (PID: $TRACKER_PID)"
+echo "✅ Tracker started (PID: $TRACKER_PID)"
 
-# Wait a bit for tracker to initialize database
-sleep 3
+# Wait for DB init
+sleep 5
 
-# Start Streamlit dashboard
-echo "🎨 Starting Streamlit dashboard..."
-streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0
+# Start dashboard
+echo "🎨 Starting dashboard (1.5s refresh)..."
+streamlit run /app/dashboard.py --server.port=${PORT:-8501} --server.address=0.0.0.0
 
-# If Streamlit exits, kill the tracker
+# Cleanup
 kill $TRACKER_PID 2>/dev/null || true
