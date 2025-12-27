@@ -27,7 +27,7 @@ HEADERS = {
 
 # Tracking - 100ms for ultra-precise tracking
 POLL_INTERVAL = 0.1
-SPORT_ID = 4
+SPORTS_TO_TRACK = [4, 1, 2, 7]  # Cricket, Soccer, Tennis, Horse Racing
 
 def init_database():
     """Initialize SQLite database"""
@@ -63,17 +63,20 @@ def init_database():
         return False
 
 def fetch_live_events():
-    """Fetch live cricket events"""
-    try:
-        url = f"{EVENTS_API}?sport_id={SPORT_ID}"
-        resp = requests.get(url, headers=HEADERS, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            events = data.get("data", {}).get("events", [])
-            return [e for e in events if e.get("in_play") == 1]
-    except:
-        pass
-    return []
+    """Fetch live events from all tracked sports"""
+    all_events = []
+    for sport_id in SPORTS_TO_TRACK:
+        try:
+            url = f"{EVENTS_API}?sport_id={sport_id}"
+            resp = requests.get(url, headers=HEADERS, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                events = data.get("data", {}).get("events", [])
+                live_events = [e for e in events if e.get("in_play") == 1]
+                all_events.extend(live_events)
+        except:
+            pass
+    return all_events
 
 def parse_market_data(raw_data):
     """Parse pipe-delimited market data"""
@@ -121,10 +124,10 @@ def parse_market_data(raw_data):
         pass
     return None
 
-def fetch_market_odds(market_id):
+def fetch_market_odds(market_id, sport_id=4):
     """Fetch odds for a market"""
     try:
-        url = f"{ODDS_API}?marketId={market_id}&eventTypeId={SPORT_ID}"
+        url = f"{ODDS_API}?marketId={market_id}&eventTypeId={sport_id}"
         resp = requests.get(url, headers=HEADERS, timeout=3)
         if resp.status_code == 200:
             data = resp.json()
@@ -205,9 +208,9 @@ def update_cumulative(market_id, selection_id, team_label, current_back, current
     except Exception as e:
         print(f"❌ Update error: {e}")
 
-def track_market(market_id):
+def track_market(market_id, sport_id=4):
     """Track a market"""
-    market_data = fetch_market_odds(market_id)
+    market_data = fetch_market_odds(market_id, sport_id)
     if not market_data:
         return False
     
@@ -247,15 +250,17 @@ def main():
             for event in events:
                 market_id = event.get("market_id")
                 event_name = event.get("name", event.get("event_name", "Unknown"))
+                sport_id = event.get("sport_id", 4)  # Get sport_id from event
                 
                 if market_id:
                     current_markets[market_id] = event_name
                     
                     if market_id not in tracked_markets:
-                        print(f"🆕 {event_name} ({market_id})")
+                        sport_name = {1: "⚽", 2: "🎾", 4: "🏏", 7: "🏇"}.get(sport_id, "🎯")
+                        print(f"🆕 {sport_name} {event_name} ({market_id})")
                         tracked_markets[market_id] = event_name
                     
-                    track_market(market_id)
+                    track_market(market_id, sport_id)
             
             finished = set(tracked_markets.keys()) - set(current_markets.keys())
             for market_id in finished:
