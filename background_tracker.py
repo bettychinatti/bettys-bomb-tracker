@@ -246,7 +246,7 @@ def main():
             
             for event in events:
                 market_id = event.get("market_id")
-                event_name = event.get("event_name", "Unknown")
+                event_name = event.get("name", event.get("event_name", "Unknown"))
                 
                 if market_id:
                     current_markets[market_id] = event_name
