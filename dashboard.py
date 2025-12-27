@@ -71,9 +71,18 @@ def get_cumulative_data(market_id):
     """Fetch cumulative tracking data from database"""
     try:
         if not DB_PATH.exists():
+            print(f"❌ Database not found at {DB_PATH}")
             return []
         
+        print(f"🔍 Querying cumulative data for market_id: {market_id}")
         conn = sqlite3.connect(DB_PATH)
+        
+        # First check if table exists and has any data
+        cursor = conn.execute("SELECT COUNT(*) FROM cumulative")
+        total_rows = cursor.fetchone()[0]
+        print(f"📊 Total cumulative records in DB: {total_rows}")
+        
+        # Now query for specific market
         cursor = conn.execute("""
             SELECT selection_id, team_label, in_back, in_lay, out_back, out_lay, net_back, net_lay, updated_at
             FROM cumulative
@@ -81,6 +90,7 @@ def get_cumulative_data(market_id):
             ORDER BY selection_id
         """, (str(market_id),))
         rows = cursor.fetchall()
+        print(f"✅ Found {len(rows)} cumulative records for market {market_id}")
         conn.close()
         
         return [{
@@ -95,7 +105,7 @@ def get_cumulative_data(market_id):
             'updated': row[8]
         } for row in rows]
     except Exception as e:
-        print(f"Database error: {e}")
+        print(f"❌ Database error: {e}")
         return []
 
 @st.cache_data(ttl=1.5)  # Refresh every 1.5 seconds
