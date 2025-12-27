@@ -1,196 +1,196 @@
-"""""""""import time
+""""""""""""import time
 
 Real-time Cumulative Market Tracker
 
-Polls APIs every 2 seconds and tracks money movementsBackground Market Tracker - Polls API every 2 seconds and tracks cumulative stake changes
+Polls APIs every 100ms for precise trackingReal-time Cumulative Market Tracker
 
 """
 
-import time"""Real-time Cumulative Market Trackerimport requests
+import timePolls APIs every 2 seconds and tracks money movementsBackground Market Tracker - Polls API every 2 seconds and tracks cumulative stake changes
 
 import requests
 
-import sqlite3import sqlite3
+import sqlite3"""
 
 from datetime import datetime, timezone
 
-from pathlib import Pathimport requestsPolls APIs every 2 seconds and tracks money movementsfrom datetime import datetime, timezone
+from pathlib import Pathimport time"""Real-time Cumulative Market Trackerimport requests
 
 from typing import Any, Dict, List, Optional, Tuple
 
-import time
+import requests
 
 # Database configuration
 
-if Path('/data').exists():from pathlib import Path"""from typing import Any, Dict, List, Optional, Tuple
+if Path('/data').exists():import sqlite3import sqlite3
 
     DB_PATH = Path('/data') / 'tracker.db'
 
-else:from datetime import datetime
+else:from datetime import datetime, timezone
 
     DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
 
-    DB_PATH.parent.mkdir(exist_ok=True)import requests
+    DB_PATH.parent.mkdir(exist_ok=True)from pathlib import Pathimport requestsPolls APIs every 2 seconds and tracks money movementsfrom datetime import datetime, timezone
 
 
 
-# API Configuration# Database path (same location as dashboard)
+# API Configurationfrom typing import Any, Dict, List, Optional, Tuple
 
 EVENTS_API = "https://api.d99exch.com/api/guest/event_list"
 
-ODDS_API = "https://odds.o99exch.com/ws/getMarketDataNew"if Path('/data').exists():import sqlite3from persistence import init_db, get_conn, upsert_market, upsert_team_labels, increment_cumulative
+ODDS_API = "https://odds.o99exch.com/ws/getMarketDataNew"import time
 
 HEADERS = {
 
-    "accept": "application/json",    DB_PATH = Path('/data') / 'tracker.db'
+    "accept": "application/json",# Database configuration
 
     "origin": "https://d99exch.com",
 
-    "referer": "https://d99exch.com/"else:import timefrom token_manager import get_valid_token
+    "referer": "https://d99exch.com/"if Path('/data').exists():from pathlib import Path"""from typing import Any, Dict, List, Optional, Tuple
 
 }
 
-    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
+    DB_PATH = Path('/data') / 'tracker.db'
 
-# Tracking configuration
+# Tracking configuration - 100ms polling for precise tracking
 
-POLL_INTERVAL = 2  # seconds    DB_PATH.parent.mkdir(exist_ok=True)from datetime import datetime
+POLL_INTERVAL = 0.1  # 100 milliseconds - catches all matched betselse:from datetime import datetime
 
 SPORT_ID = 4  # Cricket
 
-
+    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
 
 def init_database():
 
-    """Initialize SQLite database with schema for tracking"""def init_database():from pathlib import Path# Use authenticated client endpoints (not guest endpoints)
+    """Initialize SQLite database with schema for tracking"""    DB_PATH.parent.mkdir(exist_ok=True)import requests
 
     conn = sqlite3.connect(DB_PATH)
 
-    cursor = conn.cursor()    """Initialize SQLite database with schema"""
+    cursor = conn.cursor()
 
     
 
-    # Snapshots table - stores raw stake data at each poll    conn = sqlite3.connect(DB_PATH)import osEVENTS_API = "https://api.d99exch.com/api/client/event_list"
+    # Snapshots table - stores raw stake data at each poll# API Configuration# Database path (same location as dashboard)
 
     cursor.execute("""
 
-        CREATE TABLE IF NOT EXISTS snapshots (    cursor = conn.cursor()
+        CREATE TABLE IF NOT EXISTS snapshots (EVENTS_API = "https://api.d99exch.com/api/guest/event_list"
 
             id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-            timestamp TEXT NOT NULL,    MARKET_API = "https://odds.o99exch.com/ws/getMarketDataNew"
+            timestamp TEXT NOT NULL,ODDS_API = "https://odds.o99exch.com/ws/getMarketDataNew"if Path('/data').exists():import sqlite3from persistence import init_db, get_conn, upsert_market, upsert_team_labels, increment_cumulative
 
             market_id TEXT NOT NULL,
 
-            selection_id TEXT NOT NULL,    # Table for snapshots (raw data at each poll)
+            selection_id TEXT NOT NULL,HEADERS = {
 
             team_label TEXT NOT NULL,
 
-            back_stake REAL DEFAULT 0,    cursor.execute("""# Database path
+            back_stake REAL DEFAULT 0,    "accept": "application/json",    DB_PATH = Path('/data') / 'tracker.db'
 
             lay_stake REAL DEFAULT 0,
 
-            back_odds REAL DEFAULT 0,        CREATE TABLE IF NOT EXISTS snapshots (
+            back_odds REAL DEFAULT 0,    "origin": "https://d99exch.com",
 
             lay_odds REAL DEFAULT 0
 
-        )            id INTEGER PRIMARY KEY AUTOINCREMENT,if os.path.exists('/data'):# Bearer token for API authentication
+        )    "referer": "https://d99exch.com/"else:import timefrom token_manager import get_valid_token
 
     """)
 
-                market_id TEXT,
+    }
 
     # Cumulative table - stores aggregated in/out/net flows
 
-    cursor.execute("""            selection_id TEXT,    DB_PATH = Path('/data') / 'tracker.db'# AUTO-REFRESH: Set EXCH_USERNAME and EXCH_PASSWORD env vars for automatic token refresh
+    cursor.execute("""    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
 
         CREATE TABLE IF NOT EXISTS cumulative (
 
-            market_id TEXT NOT NULL,            team_label TEXT,
+            market_id TEXT NOT NULL,# Tracking configuration
 
             selection_id TEXT NOT NULL,
 
-            team_label TEXT NOT NULL,            back_stake REAL,else:# MANUAL: Update this token from browser every ~5 hours if not using auto-refresh
+            team_label TEXT NOT NULL,POLL_INTERVAL = 2  # seconds    DB_PATH.parent.mkdir(exist_ok=True)from datetime import datetime
 
             in_back REAL DEFAULT 0,
 
-            in_lay REAL DEFAULT 0,            lay_stake REAL,
+            in_lay REAL DEFAULT 0,SPORT_ID = 4  # Cricket
 
             out_back REAL DEFAULT 0,
 
-            out_lay REAL DEFAULT 0,            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'BEARER_TOKEN_FALLBACK = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
+            out_lay REAL DEFAULT 0,
 
             net_back REAL DEFAULT 0,
 
-            net_lay REAL DEFAULT 0,        )
+            net_lay REAL DEFAULT 0,def init_database():
 
             updated_at TEXT NOT NULL,
 
-            PRIMARY KEY (market_id, selection_id)    """)
+            PRIMARY KEY (market_id, selection_id)    """Initialize SQLite database with schema for tracking"""def init_database():from pathlib import Path# Use authenticated client endpoints (not guest endpoints)
 
         )
 
-    """)    
+    """)    conn = sqlite3.connect(DB_PATH)
 
     
 
-    # Index for faster queries    # Table for cumulative tracking (aggregated changes)# Ensure parent directory exists# Get valid token (auto-refreshes if credentials provided, otherwise uses fallback)
+    # Index for faster queries    cursor = conn.cursor()    """Initialize SQLite database with schema"""
 
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_market ON snapshots(market_id, selection_id)")
 
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON snapshots(timestamp)")    cursor.execute("""
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON snapshots(timestamp)")    
 
     
 
-    conn.commit()        CREATE TABLE IF NOT EXISTS cumulative (DB_PATH.parent.mkdir(parents=True, exist_ok=True)def get_bearer_token() -> str:
+    conn.commit()    # Snapshots table - stores raw stake data at each poll    conn = sqlite3.connect(DB_PATH)import osEVENTS_API = "https://api.d99exch.com/api/client/event_list"
 
     conn.close()
 
-    print(f"✅ Database initialized at {DB_PATH}")            market_id TEXT,
+    print(f"✅ Database initialized at {DB_PATH}")    cursor.execute("""
 
 
 
-def fetch_live_events() -> List[Dict[str, Any]]:            selection_id TEXT,    """Get valid bearer token, refreshing if needed."""
+def fetch_live_events() -> List[Dict[str, Any]]:        CREATE TABLE IF NOT EXISTS snapshots (    cursor = conn.cursor()
 
     """Fetch live cricket events"""
 
-    try:            team_label TEXT,
+    try:            id INTEGER PRIMARY KEY AUTOINCREMENT,
 
         url = f"{EVENTS_API}?sport_id={SPORT_ID}"
 
-        resp = requests.get(url, headers=HEADERS, timeout=10)            in_back REAL DEFAULT 0,def init_database():    token = get_valid_token(fallback_token=BEARER_TOKEN_FALLBACK)
+        resp = requests.get(url, headers=HEADERS, timeout=5)            timestamp TEXT NOT NULL,    MARKET_API = "https://odds.o99exch.com/ws/getMarketDataNew"
 
         if resp.status_code == 200:
 
-            data = resp.json()            in_lay REAL DEFAULT 0,
+            data = resp.json()            market_id TEXT NOT NULL,
 
             events = data.get("data", {}).get("events", [])
 
-            live_events = [e for e in events if e.get("in_play") == 1]            out_back REAL DEFAULT 0,    """Initialize database schema"""    return token or BEARER_TOKEN_FALLBACK
+            live_events = [e for e in events if e.get("in_play") == 1]            selection_id TEXT NOT NULL,    # Table for snapshots (raw data at each poll)
 
             return live_events
 
-    except Exception as e:            out_lay REAL DEFAULT 0,
+    except Exception as e:            team_label TEXT NOT NULL,
 
         print(f"❌ Error fetching events: {e}")
 
-    return []            net_back REAL DEFAULT 0,    conn = sqlite3.connect(DB_PATH)
+    return []            back_stake REAL DEFAULT 0,    cursor.execute("""# Database path
 
 
 
-def parse_market_data(raw_data: str) -> Optional[Dict[str, Any]]:            net_lay REAL DEFAULT 0,
+def parse_market_data(raw_data: str) -> Optional[Dict[str, Any]]:            lay_stake REAL DEFAULT 0,
 
     """Parse pipe-delimited market data format"""
 
-    try:            updated_at DATETIME,    cursor = conn.cursor()# Enhanced headers matching real browser requests
+    try:            back_odds REAL DEFAULT 0,        CREATE TABLE IF NOT EXISTS snapshots (
 
         parts = raw_data.split('~')
 
-        if len(parts) < 8:            PRIMARY KEY (market_id, selection_id)
+        if len(parts) < 8:            lay_odds REAL DEFAULT 0
 
             return None
 
-                )    def get_headers() -> dict:
+                )            id INTEGER PRIMARY KEY AUTOINCREMENT,if os.path.exists('/data'):# Bearer token for API authentication
 
         market_id = parts[0]
 
@@ -198,103 +198,103 @@ def parse_market_data(raw_data: str) -> Optional[Dict[str, Any]]:            net
 
         
 
-        # Parse runner data (starts at index 7)        # Table for current snapshot    """Get request headers with current valid token."""
+        # Parse runner data (starts at index 7)                market_id TEXT,
 
         i = 7
 
-        while i < len(parts):    conn.commit()
+        while i < len(parts):    # Cumulative table - stores aggregated in/out/net flows
 
             if '|' in parts[i]:
 
-                runner_parts = parts[i].split('|')    conn.close()    cursor.execute("""    return {
+                runner_parts = parts[i].split('|')    cursor.execute("""            selection_id TEXT,    DB_PATH = Path('/data') / 'tracker.db'# AUTO-REFRESH: Set EXCH_USERNAME and EXCH_PASSWORD env vars for automatic token refresh
 
                 if len(runner_parts) >= 11:
 
-                    selection_id = runner_parts[0]    print(f"✅ Database initialized at: {DB_PATH}")
+                    selection_id = runner_parts[0]        CREATE TABLE IF NOT EXISTS cumulative (
 
                     team_label = runner_parts[10] if len(runner_parts) > 10 else "Unknown"
 
-                            CREATE TABLE IF NOT EXISTS snapshots (        "Content-Type": "application/x-www-form-urlencoded",
+                                market_id TEXT NOT NULL,            team_label TEXT,
 
-                    # Parse back odds (index 1-3)
+                    # Parse back stakes (index 1-3)
 
-                    back_stakes = []def fetch_live_events():
+                    back_stakes = []            selection_id TEXT NOT NULL,
 
                     if len(runner_parts) > 3:
 
-                        for j in range(1, 4):    """Fetch all live cricket events"""            market_id TEXT,        "Accept": "application/json, text/plain, */*",
+                        for j in range(1, 4):            team_label TEXT NOT NULL,            back_stake REAL,else:# MANUAL: Update this token from browser every ~5 hours if not using auto-refresh
 
                             try:
 
-                                back_stakes.append(float(runner_parts[j]))    try:
+                                back_stakes.append(float(runner_parts[j]))            in_back REAL DEFAULT 0,
 
                             except (ValueError, IndexError):
 
-                                back_stakes.append(0.0)        headers = {            selection_id TEXT,        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+                                back_stakes.append(0.0)            in_lay REAL DEFAULT 0,            lay_stake REAL,
 
                     
 
-                    # Parse lay odds (index 4-6)            "accept": "application/json",
+                    # Parse lay stakes (index 4-6)            out_back REAL DEFAULT 0,
 
                     lay_stakes = []
 
-                    if len(runner_parts) > 6:            "origin": "https://d99exch.com",            timestamp TEXT,        "Accept-Encoding": "gzip, deflate, br, zstd",
+                    if len(runner_parts) > 6:            out_lay REAL DEFAULT 0,            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'BEARER_TOKEN_FALLBACK = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5kOTlleGNoLmNvbS9hcGkvYXV0aCIsImlhdCI6MTc2Njc0NTQ2NywiZXhwIjoxNzY2NzYzNDY3LCJuYmYiOjE3NjY3NDU0NjcsImp0aSI6IlRNd1IwTjNwQVRQcFVIWkkiLCJzdWIiOiI5ODcyOTQiLCJwcnYiOiI4N2UwYWYxZWY5ZmQxNTgxMmZkZWM5NzE1M2ExNGUwYjA0NzU0NmFhIn0.XE3AIrm60v-No5wuNmSwDBGHZgNSYUk5S4C4kGJYd7U"
 
                         for j in range(4, 7):
 
-                            try:            "referer": "https://d99exch.com/"
+                            try:            net_back REAL DEFAULT 0,
 
                                 lay_stakes.append(float(runner_parts[j]))
 
-                            except (ValueError, IndexError):        }            back_total REAL,        "Authorization": f"bearer {get_bearer_token()}",  # Dynamic token
+                            except (ValueError, IndexError):            net_lay REAL DEFAULT 0,        )
 
                                 lay_stakes.append(0.0)
 
-                            url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
+                                updated_at TEXT NOT NULL,
 
                     # Parse odds (back at 7, lay at 8)
 
-                    back_odds = float(runner_parts[7]) if len(runner_parts) > 7 and runner_parts[7] else 0.0        resp = requests.get(url, headers=headers, timeout=10)            lay_total REAL,        "Origin": "https://99exch.com",
+                    back_odds = float(runner_parts[7]) if len(runner_parts) > 7 and runner_parts[7] else 0.0            PRIMARY KEY (market_id, selection_id)    """)
 
                     lay_odds = float(runner_parts[8]) if len(runner_parts) > 8 and runner_parts[8] else 0.0
 
-                            
+                            )
 
                     selections.append({
 
-                        'selection_id': selection_id,        if resp.status_code == 200:            PRIMARY KEY (market_id, selection_id, timestamp)        "Referer": "https://99exch.com/",
+                        'selection_id': selection_id,    """)    
 
                         'team': team_label,
 
-                        'back_stake': sum(back_stakes),            data = resp.json()
+                        'back_stake': sum(back_stakes),    
 
                         'lay_stake': sum(lay_stakes),
 
-                        'back_odds': back_odds,            events = data.get("data", {}).get("events", [])        )        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+                        'back_odds': back_odds,    # Index for faster queries    # Table for cumulative tracking (aggregated changes)# Ensure parent directory exists# Get valid token (auto-refreshes if credentials provided, otherwise uses fallback)
 
                         'lay_odds': lay_odds
 
-                    })            live_events = [e for e in events if e.get("in_play") == 1]
+                    })    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_market ON snapshots(market_id, selection_id)")
 
             i += 1
 
-                    return live_events    """)        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_timestamp ON snapshots(timestamp)")    cursor.execute("""
 
         if selections:
 
-            return {        return []
+            return {    
 
                 'market_id': market_id,
 
-                'selections': selections    except Exception as e:            "sec-ch-ua-mobile": "?0",
+                'selections': selections    conn.commit()        CREATE TABLE IF NOT EXISTS cumulative (DB_PATH.parent.mkdir(parents=True, exist_ok=True)def get_bearer_token() -> str:
 
             }
 
-    except Exception as e:        print(f"❌ Error fetching events: {e}")
+    except Exception as e:    conn.close()
 
         print(f"❌ Parse error: {e}")
 
-    return None        return []    # Table for cumulative tracking        "sec-ch-ua-platform": '"macOS"',
+    return None    print(f"✅ Database initialized at {DB_PATH}")            market_id TEXT,
 
 
 
@@ -302,31 +302,360 @@ def fetch_market_odds(market_id: str) -> Optional[Dict[str, Any]]:
 
     """Fetch odds data for a specific market"""
 
-    try:def parse_market_data(raw_data):    cursor.execute("""        "sec-fetch-dest": "empty",
+    try:def fetch_live_events() -> List[Dict[str, Any]]:            selection_id TEXT,    """Get valid bearer token, refreshing if needed."""
 
         url = f"{ODDS_API}?marketId={market_id}&eventTypeId={SPORT_ID}"
 
-        resp = requests.get(url, headers=HEADERS, timeout=10)    """Parse pipe-delimited market data"""
+        resp = requests.get(url, headers=HEADERS, timeout=3)    """Fetch live cricket events"""
 
         if resp.status_code == 200:
 
-            data = resp.json()    teams = []        CREATE TABLE IF NOT EXISTS cumulative (        "sec-fetch-mode": "cors",
+            data = resp.json()    try:            team_label TEXT,
 
             if data.get("success") and data.get("data"):
 
-                return parse_market_data(data["data"])    try:
+                return parse_market_data(data["data"])        url = f"{EVENTS_API}?sport_id={SPORT_ID}"
 
     except Exception as e:
 
-        print(f"❌ Error fetching odds for {market_id}: {e}")        parts = raw_data.split("|")            market_id TEXT,        "sec-fetch-site": "cross-site",
+        # Silently fail to avoid console spam during 100ms polling        resp = requests.get(url, headers=HEADERS, timeout=10)            in_back REAL DEFAULT 0,def init_database():    token = get_valid_token(fallback_token=BEARER_TOKEN_FALLBACK)
+
+        pass
+
+    return None        if resp.status_code == 200:
+
+
+
+def get_last_snapshot(market_id: str, selection_id: str) -> Optional[Tuple[float, float]]:            data = resp.json()            in_lay REAL DEFAULT 0,
+
+    """Get the last recorded stakes for a selection"""
+
+    try:            events = data.get("data", {}).get("events", [])
+
+        conn = sqlite3.connect(DB_PATH)
+
+        cursor = conn.execute("""            live_events = [e for e in events if e.get("in_play") == 1]            out_back REAL DEFAULT 0,    """Initialize database schema"""    return token or BEARER_TOKEN_FALLBACK
+
+            SELECT back_stake, lay_stake
+
+            FROM snapshots            return live_events
+
+            WHERE market_id = ? AND selection_id = ?
+
+            ORDER BY timestamp DESC    except Exception as e:            out_lay REAL DEFAULT 0,
+
+            LIMIT 1
+
+        """, (market_id, selection_id))        print(f"❌ Error fetching events: {e}")
+
+        row = cursor.fetchone()
+
+        conn.close()    return []            net_back REAL DEFAULT 0,    conn = sqlite3.connect(DB_PATH)
+
+        if row:
+
+            return (row[0], row[1])
+
+    except Exception:
+
+        passdef parse_market_data(raw_data: str) -> Optional[Dict[str, Any]]:            net_lay REAL DEFAULT 0,
 
     return None
 
+    """Parse pipe-delimited market data format"""
+
+def save_snapshot(timestamp: str, market_id: str, selection_id: str, team_label: str, 
+
+                  back_stake: float, lay_stake: float, back_odds: float, lay_odds: float):    try:            updated_at DATETIME,    cursor = conn.cursor()# Enhanced headers matching real browser requests
+
+    """Save a snapshot to the database"""
+
+    try:        parts = raw_data.split('~')
+
+        conn = sqlite3.connect(DB_PATH)
+
+        conn.execute("""        if len(parts) < 8:            PRIMARY KEY (market_id, selection_id)
+
+            INSERT INTO snapshots (timestamp, market_id, selection_id, team_label, back_stake, lay_stake, back_odds, lay_odds)
+
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)            return None
+
+        """, (timestamp, market_id, selection_id, team_label, back_stake, lay_stake, back_odds, lay_odds))
+
+        conn.commit()                )    def get_headers() -> dict:
+
+        conn.close()
+
+    except Exception:        market_id = parts[0]
+
+        pass
+
+        selections = []    """)
+
+def update_cumulative(market_id: str, selection_id: str, team_label: str,
+
+                      delta_back: float, delta_lay: float, timestamp: str):        
+
+    """Update cumulative tracking with deltas"""
+
+    try:        # Parse runner data (starts at index 7)        # Table for current snapshot    """Get request headers with current valid token."""
+
+        conn = sqlite3.connect(DB_PATH)
+
+        cursor = conn.cursor()        i = 7
+
         
+
+        # Get current cumulative data        while i < len(parts):    conn.commit()
+
+        cursor.execute("""
+
+            SELECT in_back, in_lay, out_back, out_lay, net_back, net_lay            if '|' in parts[i]:
+
+            FROM cumulative
+
+            WHERE market_id = ? AND selection_id = ?                runner_parts = parts[i].split('|')    conn.close()    cursor.execute("""    return {
+
+        """, (market_id, selection_id))
+
+        row = cursor.fetchone()                if len(runner_parts) >= 11:
+
+        
+
+        if row:                    selection_id = runner_parts[0]    print(f"✅ Database initialized at: {DB_PATH}")
+
+            in_back, in_lay, out_back, out_lay, net_back, net_lay = row
+
+        else:                    team_label = runner_parts[10] if len(runner_parts) > 10 else "Unknown"
+
+            in_back = in_lay = out_back = out_lay = net_back = net_lay = 0.0
+
+                                    CREATE TABLE IF NOT EXISTS snapshots (        "Content-Type": "application/x-www-form-urlencoded",
+
+        # Calculate new values based on deltas
+
+        if delta_back > 0:                    # Parse back odds (index 1-3)
+
+            in_back += delta_back
+
+        elif delta_back < 0:                    back_stakes = []def fetch_live_events():
+
+            out_back += abs(delta_back)
+
+                            if len(runner_parts) > 3:
+
+        if delta_lay > 0:
+
+            in_lay += delta_lay                        for j in range(1, 4):    """Fetch all live cricket events"""            market_id TEXT,        "Accept": "application/json, text/plain, */*",
+
+        elif delta_lay < 0:
+
+            out_lay += abs(delta_lay)                            try:
+
+        
+
+        net_back = in_back - out_back                                back_stakes.append(float(runner_parts[j]))    try:
+
+        net_lay = in_lay - out_lay
+
+                                    except (ValueError, IndexError):
+
+        # Upsert cumulative data
+
+        cursor.execute("""                                back_stakes.append(0.0)        headers = {            selection_id TEXT,        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+
+            INSERT OR REPLACE INTO cumulative (market_id, selection_id, team_label, in_back, in_lay, out_back, out_lay, net_back, net_lay, updated_at)
+
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)                    
+
+        """, (market_id, selection_id, team_label, in_back, in_lay, out_back, out_lay, net_back, net_lay, timestamp))
+
+                            # Parse lay odds (index 4-6)            "accept": "application/json",
+
+        conn.commit()
+
+        conn.close()                    lay_stakes = []
+
+        
+
+        # Only print significant changes to avoid console spam                    if len(runner_parts) > 6:            "origin": "https://d99exch.com",            timestamp TEXT,        "Accept-Encoding": "gzip, deflate, br, zstd",
+
+        if abs(delta_back) > 100 or abs(delta_lay) > 100:
+
+            print(f"📊 {team_label}: ΔBack={delta_back:+.0f}, ΔLay={delta_lay:+.0f}")                        for j in range(4, 7):
+
+    except Exception:
+
+        pass                            try:            "referer": "https://d99exch.com/"
+
+
+
+def track_market(market_id: str):                                lay_stakes.append(float(runner_parts[j]))
+
+    """Track a single market and calculate deltas"""
+
+    market_data = fetch_market_odds(market_id)                            except (ValueError, IndexError):        }            back_total REAL,        "Authorization": f"bearer {get_bearer_token()}",  # Dynamic token
+
+    if not market_data:
+
+        return                                lay_stakes.append(0.0)
+
+    
+
+    timestamp = datetime.now(timezone.utc).isoformat()                            url = "https://api.d99exch.com/api/guest/event_list?sport_id=4"
+
+    
+
+    for selection in market_data['selections']:                    # Parse odds (back at 7, lay at 8)
+
+        selection_id = selection['selection_id']
+
+        team_label = selection['team']                    back_odds = float(runner_parts[7]) if len(runner_parts) > 7 and runner_parts[7] else 0.0        resp = requests.get(url, headers=headers, timeout=10)            lay_total REAL,        "Origin": "https://99exch.com",
+
+        current_back = selection['back_stake']
+
+        current_lay = selection['lay_stake']                    lay_odds = float(runner_parts[8]) if len(runner_parts) > 8 and runner_parts[8] else 0.0
+
+        back_odds = selection['back_odds']
+
+        lay_odds = selection['lay_odds']                            
+
+        
+
+        # Get last snapshot                    selections.append({
+
+        last = get_last_snapshot(market_id, selection_id)
+
+                                'selection_id': selection_id,        if resp.status_code == 200:            PRIMARY KEY (market_id, selection_id, timestamp)        "Referer": "https://99exch.com/",
+
+        if last:
+
+            last_back, last_lay = last                        'team': team_label,
+
+            delta_back = current_back - last_back
+
+            delta_lay = current_lay - last_lay                        'back_stake': sum(back_stakes),            data = resp.json()
+
+            
+
+            # Only update if there's a change                        'lay_stake': sum(lay_stakes),
+
+            if delta_back != 0 or delta_lay != 0:
+
+                update_cumulative(market_id, selection_id, team_label, delta_back, delta_lay, timestamp)                        'back_odds': back_odds,            events = data.get("data", {}).get("events", [])        )        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+
+        
+
+        # Save current snapshot                        'lay_odds': lay_odds
+
+        save_snapshot(timestamp, market_id, selection_id, team_label, current_back, current_lay, back_odds, lay_odds)
+
+                    })            live_events = [e for e in events if e.get("in_play") == 1]
+
+def main():
+
+    """Main tracking loop - 100ms polling"""            i += 1
+
+    print("🚀 Starting High-Frequency Market Tracker")
+
+    print(f"📂 Database: {DB_PATH}")                    return live_events    """)        "sec-ch-ua": '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+
+    print(f"⚡ Poll interval: {POLL_INTERVAL*1000:.0f}ms (high precision)")
+
+    print("=" * 60)        if selections:
+
+    
+
+    init_database()            return {        return []
+
+    
+
+    tracked_markets = set()                'market_id': market_id,
+
+    loop_count = 0
+
+                    'selections': selections    except Exception as e:            "sec-ch-ua-mobile": "?0",
+
+    while True:
+
+        try:            }
+
+            # Fetch live events every 10 loops (1 second) to reduce API calls
+
+            if loop_count % 10 == 0:    except Exception as e:        print(f"❌ Error fetching events: {e}")
+
+                events = fetch_live_events()
+
+                current_markets = set()        print(f"❌ Parse error: {e}")
+
+                
+
+                for event in events:    return None        return []    # Table for cumulative tracking        "sec-ch-ua-platform": '"macOS"',
+
+                    market_id = event.get("market_id")
+
+                    if market_id:
+
+                        current_markets.add(market_id)
+
+                        def fetch_market_odds(market_id: str) -> Optional[Dict[str, Any]]:
+
+                        # Track new markets
+
+                        if market_id not in tracked_markets:    """Fetch odds data for a specific market"""
+
+                            event_name = event.get("event_name", "Unknown")
+
+                            print(f"🆕 Tracking: {event_name} ({market_id})")    try:def parse_market_data(raw_data):    cursor.execute("""        "sec-fetch-dest": "empty",
+
+                            tracked_markets.add(market_id)
+
+                        url = f"{ODDS_API}?marketId={market_id}&eventTypeId={SPORT_ID}"
+
+                # Remove markets that are no longer live
+
+                removed = tracked_markets - current_markets        resp = requests.get(url, headers=HEADERS, timeout=10)    """Parse pipe-delimited market data"""
+
+                if removed:
+
+                    print(f"🔴 Finished: {len(removed)} markets")        if resp.status_code == 200:
+
+                    tracked_markets = current_markets
+
+                        data = resp.json()    teams = []        CREATE TABLE IF NOT EXISTS cumulative (        "sec-fetch-mode": "cors",
+
+            # Track all active markets at 100ms intervals
+
+            for market_id in tracked_markets:            if data.get("success") and data.get("data"):
+
+                track_market(market_id)
+
+                            return parse_market_data(data["data"])    try:
+
+            loop_count += 1
+
+            time.sleep(POLL_INTERVAL)    except Exception as e:
+
+            
+
+        except KeyboardInterrupt:        print(f"❌ Error fetching odds for {market_id}: {e}")        parts = raw_data.split("|")            market_id TEXT,        "sec-fetch-site": "cross-site",
+
+            print("\n⏹️  Tracker stopped by user")
+
+            break    return None
+
+        except Exception as e:
+
+            print(f"❌ Error: {e}")        
+
+            time.sleep(POLL_INTERVAL)
 
 def get_last_snapshot(market_id: str, selection_id: str) -> Optional[Tuple[float, float]]:
 
-    """Get the last recorded stakes for a selection"""        i = 0            selection_id TEXT,        "priority": "u=1, i",
+if __name__ == "__main__":
+
+    main()    """Get the last recorded stakes for a selection"""        i = 0            selection_id TEXT,        "priority": "u=1, i",
+
 
     try:
 

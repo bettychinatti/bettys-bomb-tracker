@@ -98,7 +98,7 @@ def get_cumulative_data(market_id):
         print(f"Database error: {e}")
         return []
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=1.5)  # Refresh every 1.5 seconds
 def fetch_events_by_sport(sport_id):
     """Fetch live events for a specific sport"""
     try:
@@ -415,6 +415,59 @@ with col1:
                                 </div>
                             </div>
                             ''', unsafe_allow_html=True)
+                    
+                    # Expandable Cumulative Tracking Section
+                    with st.expander("💰 View Cumulative Money Flow Tracker", expanded=False):
+                        cumulative_data = get_cumulative_data(market_id)
+                        if cumulative_data:
+                            st.markdown("#### Real-Time Money Movement (100ms precision)")
+                            
+                            # Create columns for each team's cumulative data
+                            cum_cols = st.columns(len(cumulative_data))
+                            for idx, cum in enumerate(cumulative_data):
+                                with cum_cols[idx]:
+                                    st.markdown(f"""
+                                    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px;">
+                                        <div style="color: #f59e0b; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; text-align: center;">
+                                            {cum['team'][:20]}
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                                            <div style="background: rgba(16, 185, 129, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
+                                                <div style="color: #94a3b8; font-size: 0.65rem;">💵 In (Back)</div>
+                                                <div style="color: #10b981; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['in_back'])}</div>
+                                            </div>
+                                            <div style="background: rgba(16, 185, 129, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
+                                                <div style="color: #94a3b8; font-size: 0.65rem;">💵 In (Lay)</div>
+                                                <div style="color: #10b981; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['in_lay'])}</div>
+                                            </div>
+                                            <div style="background: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
+                                                <div style="color: #94a3b8; font-size: 0.65rem;">💸 Out (Back)</div>
+                                                <div style="color: #ef4444; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['out_back'])}</div>
+                                            </div>
+                                            <div style="background: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
+                                                <div style="color: #94a3b8; font-size: 0.65rem;">💸 Out (Lay)</div>
+                                                <div style="color: #ef4444; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['out_lay'])}</div>
+                                            </div>
+                                        </div>
+                                        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 4px;">
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                                                <div style="background: rgba(59, 130, 246, 0.2); padding: 6px; border-radius: 4px; text-align: center;">
+                                                    <div style="color: #94a3b8; font-size: 0.65rem;">💰 Net Back</div>
+                                                    <div style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">{format_stake(cum['net_back'])}</div>
+                                                </div>
+                                                <div style="background: rgba(59, 130, 246, 0.2); padding: 6px; border-radius: 4px; text-align: center;">
+                                                    <div style="color: #94a3b8; font-size: 0.65rem;">💰 Net Lay</div>
+                                                    <div style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">{format_stake(cum['net_lay'])}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            
+                            st.caption(f"📊 Last updated: {cumulative_data[0]['updated'][:19] if cumulative_data else 'N/A'} • Tracking at 100ms precision")
+                        else:
+                            st.info("⏳ Cumulative tracking data not available yet. Tracker needs 30-60 seconds to collect data.")
+                
                 else:
                     st.caption("⏳ Odds not available")
                 st.markdown("---")
