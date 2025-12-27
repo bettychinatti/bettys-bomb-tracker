@@ -35,6 +35,9 @@ def init_database():
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
+        # Drop old table if it exists to ensure correct schema
+        cursor.execute("DROP TABLE IF EXISTS cumulative")
+        
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS cumulative (
                 market_id TEXT NOT NULL,
@@ -56,7 +59,7 @@ def init_database():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cumulative_market ON cumulative(market_id)")
         conn.commit()
         conn.close()
-        print(f"✅ Database initialized: {DB_PATH}")
+        print(f"✅ Database initialized (fresh schema): {DB_PATH}")
         return True
     except Exception as e:
         print(f"❌ Database error: {e}")
