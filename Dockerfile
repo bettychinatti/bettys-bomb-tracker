@@ -20,9 +20,10 @@ COPY requirements.txt /app/
 RUN pip install -r requirements.txt
 
 # Copy app files
-COPY dashboard.py /app/
+COPY dashboard.py background_tracker.py entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8501
 
-# Run Streamlit directly
-CMD ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run both tracker and dashboard
+CMD ["/app/entrypoint.sh"]

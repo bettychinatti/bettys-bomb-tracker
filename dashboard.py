@@ -3,7 +3,16 @@ Advanced Market Load Tracker - Real-time Odds Dashboard
 """
 import streamlit as st
 import requests
+import sqlite3
 from datetime import datetime
+from pathlib import Path
+import os
+
+# Database path (same as background tracker)
+if os.path.exists('/data'):
+    DB_PATH = Path('/data') / 'tracker.db'
+else:
+    DB_PATH = Path(__file__).parent / 'data' / 'tracker.db'
 
 st.set_page_config(
     page_title="Market Load Tracker",
@@ -57,6 +66,37 @@ SPORTS = [
     {"id": 2, "name": "Tennis", "icon": "��"},
     {"id": 7, "name": "Horse Racing", "icon": "🏇"},
 ]
+
+def get_cumulative_data(market_id):
+    """Fetch cumulative tracking data from database"""
+    try:
+        if not DB_PATH.exists():
+            return []
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.execute("""
+            SELECT selection_id, team_label, in_back, in_lay, out_back, out_lay, net_back, net_lay, updated_at
+            FROM cumulative
+            WHERE market_id = ?
+            ORDER BY selection_id
+        """, (str(market_id),))
+        rows = cursor.fetchall()
+        conn.close()
+        
+        return [{
+            'selection_id': row[0],
+            'team': row[1],
+            'in_back': row[2],
+            'in_lay': row[3],
+            'out_back': row[4],
+            'out_lay': row[5],
+            'net_back': row[6],
+            'net_lay': row[7],
+            'updated': row[8]
+        } for row in rows]
+    except Exception as e:
+        print(f"Database error: {e}")
+        return []
 
 @st.cache_data(ttl=5)
 def fetch_events_by_sport(sport_id):

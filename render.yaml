@@ -1,5 +1,5 @@
 # Render.com FREE tier deployment configuration
-# Simple odds tracker - no database needed
+# Real-time cumulative tracker with database
 
 services:
   - type: web
@@ -17,3 +17,9 @@ services:
         value: true
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: false
+    
+    # Persistent disk for cumulative tracking database
+    disks:
+      - name: tracker-data
+        mountPath: /data
+        sizeGB: 1
