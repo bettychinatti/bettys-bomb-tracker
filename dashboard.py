@@ -358,26 +358,15 @@ with col1:
                         team1 = market_load[0]
                         team2 = market_load[1]
                         
-                        st.markdown(f"""
-                        <div style="background: rgba(30,30,50,0.9); border-radius: 10px; padding: 15px; margin: 10px 0;">
-                            <div style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 8px; text-align: center;">Match Load</div>
-                            <div style="display: flex; height: 25px; border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
-                                <div style="background: #ef4444; width: {team1['percentage']:.1f}%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: bold;">
-                                    {team1['percentage']:.1f}%
-                                </div>
-                                <div style="background: #10b981; width: {team2['percentage']:.1f}%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: white; font-weight: bold;">
-                                    {team2['percentage']:.1f}%
-                                </div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.75rem;">
-                                <span>{team1['name'][:20]}: {team1['percentage']:.1f}%</span>
-                                <span>{team2['name'][:20]}: {team2['percentage']:.1f}%</span>
-                            </div>
-                            <div style="color: #3b82f6; font-size: 0.75rem; text-align: center; margin-top: 5px;">
-                                Match Load on <span style="color: #60a5fa;">{team1['name'] if team1['percentage'] > team2['percentage'] else team2['name']}</span>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.caption("Match Load")
+                        col_t1, col_t2 = st.columns(2)
+                        with col_t1:
+                            st.progress(team1['percentage'] / 100, text=f"🔴 {team1['name'][:15]}: {team1['percentage']:.1f}%")
+                        with col_t2:
+                            st.progress(team2['percentage'] / 100, text=f"🟢 {team2['name'][:15]}: {team2['percentage']:.1f}%")
+                        
+                        leader = team1['name'] if team1['percentage'] > team2['percentage'] else team2['name']
+                        st.info(f"📊 Match Load on **{leader}**")
                     
                     # Display team stats with Total Bet and P/L
                     cols = st.columns(len(runners))
@@ -397,35 +386,20 @@ with col1:
                             pl_display = format_stake(load_data['pl_if_win']) if load_data else "N/A"
                             pl_color = "#10b981" if load_data and load_data['pl_if_win'] > 0 else "#ef4444"
                             
-                            st.markdown(f'''
-                            <div style="background: rgba(30,30,50,0.8); border-radius: 10px; padding: 12px; text-align: center;">
-                                <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px; font-size: 0.95rem;">{name[:18]}</div>
-                                
-                                <!-- Odds Display -->
-                                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 12px;">
-                                    <div style="background: rgba(72, 187, 120, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                        <div style="color: #48bb78; font-weight: bold;">{bp}</div>
-                                        <div style="color: #68d391; font-size: 0.7rem;">{format_stake(bs)}</div>
-                                    </div>
-                                    <div style="background: rgba(245, 101, 101, 0.3); border-radius: 6px; padding: 6px 12px;">
-                                        <div style="color: #f56565; font-weight: bold;">{lp}</div>
-                                        <div style="color: #fc8181; font-size: 0.7rem;">{format_stake(ls)}</div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Market Load Stats -->
-                                <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-                                    <div style="background: rgba(59, 130, 246, 0.15); border-radius: 6px; padding: 8px; margin-bottom: 6px;">
-                                        <div style="color: #94a3b8; font-size: 0.65rem;">Total Bet</div>
-                                        <div style="color: #3b82f6; font-weight: bold; font-size: 0.95rem;">{total_bet_display}</div>
-                                    </div>
-                                    <div style="background: rgba(239, 68, 68, 0.15); border-radius: 6px; padding: 8px;">
-                                        <div style="color: #94a3b8; font-size: 0.65rem;">P/L if Win</div>
-                                        <div style="color: {pl_color}; font-weight: bold; font-size: 0.95rem;">{pl_display}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            ''', unsafe_allow_html=True)
+                            # Display odds using Streamlit native components
+                            st.markdown(f"**{name[:20]}**")
+                            
+                            ocol1, ocol2 = st.columns(2)
+                            with ocol1:
+                                st.metric("Back", bp, delta=f"₹{format_stake(bs)}", delta_color="normal")
+                            with ocol2:
+                                st.metric("Lay", lp, delta=f"₹{format_stake(ls)}", delta_color="inverse")
+                            
+                            mcol1, mcol2 = st.columns(2)
+                            with mcol1:
+                                st.metric("Total Bet", total_bet_display)
+                            with mcol2:
+                                st.metric("P/L if Win", pl_display, delta_color="normal" if load_data and load_data['pl_if_win'] > 0 else "inverse")
                     
                     # Expandable Cumulative Tracking Section
                     with st.expander("💰 View Cumulative Money Flow Tracker", expanded=False):
@@ -437,43 +411,28 @@ with col1:
                             cum_cols = st.columns(len(cumulative_data))
                             for idx, cum in enumerate(cumulative_data):
                                 with cum_cols[idx]:
-                                    st.markdown(f"""
-                                    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px;">
-                                        <div style="color: #f59e0b; font-size: 0.85rem; font-weight: bold; margin-bottom: 8px; text-align: center;">
-                                            {cum['team'][:20]}
-                                        </div>
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
-                                            <div style="background: rgba(16, 185, 129, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
-                                                <div style="color: #94a3b8; font-size: 0.65rem;">💵 In (Back)</div>
-                                                <div style="color: #10b981; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['in_back'])}</div>
-                                            </div>
-                                            <div style="background: rgba(16, 185, 129, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
-                                                <div style="color: #94a3b8; font-size: 0.65rem;">💵 In (Lay)</div>
-                                                <div style="color: #10b981; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['in_lay'])}</div>
-                                            </div>
-                                            <div style="background: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
-                                                <div style="color: #94a3b8; font-size: 0.65rem;">💸 Out (Back)</div>
-                                                <div style="color: #ef4444; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['out_back'])}</div>
-                                            </div>
-                                            <div style="background: rgba(239, 68, 68, 0.15); padding: 6px; border-radius: 4px; text-align: center;">
-                                                <div style="color: #94a3b8; font-size: 0.65rem;">💸 Out (Lay)</div>
-                                                <div style="color: #ef4444; font-weight: bold; font-size: 0.85rem;">{format_stake(cum['out_lay'])}</div>
-                                            </div>
-                                        </div>
-                                        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; margin-top: 4px;">
-                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                                                <div style="background: rgba(59, 130, 246, 0.2); padding: 6px; border-radius: 4px; text-align: center;">
-                                                    <div style="color: #94a3b8; font-size: 0.65rem;">💰 Net Back</div>
-                                                    <div style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">{format_stake(cum['net_back'])}</div>
-                                                </div>
-                                                <div style="background: rgba(59, 130, 246, 0.2); padding: 6px; border-radius: 4px; text-align: center;">
-                                                    <div style="color: #94a3b8; font-size: 0.65rem;">💰 Net Lay</div>
-                                                    <div style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">{format_stake(cum['net_lay'])}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    """, unsafe_allow_html=True)
+                                    st.markdown(f"**{cum['team'][:20]}**")
+                                    
+                                    # In flows
+                                    in_col1, in_col2 = st.columns(2)
+                                    with in_col1:
+                                        st.metric("💵 In (Back)", format_stake(cum['in_back']))
+                                    with in_col2:
+                                        st.metric("💵 In (Lay)", format_stake(cum['in_lay']))
+                                    
+                                    # Out flows
+                                    out_col1, out_col2 = st.columns(2)
+                                    with out_col1:
+                                        st.metric("💸 Out (Back)", format_stake(cum['out_back']))
+                                    with out_col2:
+                                        st.metric("💸 Out (Lay)", format_stake(cum['out_lay']))
+                                    
+                                    # Net flows
+                                    net_col1, net_col2 = st.columns(2)
+                                    with net_col1:
+                                        st.metric("💰 Net Back", format_stake(cum['net_back']))
+                                    with net_col2:
+                                        st.metric("💰 Net Lay", format_stake(cum['net_lay']))
                             
                             st.caption(f"📊 Last updated: {cumulative_data[0]['updated'][:19] if cumulative_data else 'N/A'} • Tracking at 100ms precision")
                         else:
