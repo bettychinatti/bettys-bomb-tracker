@@ -19,10 +19,14 @@ else:
 # API Configuration
 EVENTS_API = "https://api.d99exch.com/api/guest/event_list"
 ODDS_API = "https://odds.o99exch.com/ws/getMarketDataNew"
-HEADERS = {
+EVENTS_HEADERS = {
     "accept": "application/json",
     "origin": "https://d99exch.com",
     "referer": "https://d99exch.com/"
+}
+ODDS_HEADERS = {
+    "content-type": "application/x-www-form-urlencoded",
+    "origin": "https://99exch.com"
 }
 
 # Tracking - 100ms for ultra-precise tracking
@@ -84,7 +88,7 @@ def fetch_live_events():
     for sport_id in SPORTS_TO_TRACK:
         try:
             url = f"{EVENTS_API}?sport_id={sport_id}"
-            resp = requests.get(url, headers=HEADERS, timeout=5)
+            resp = requests.get(url, headers=EVENTS_HEADERS, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
                 events = data.get("data", {}).get("events", [])
@@ -94,63 +98,87 @@ def fetch_live_events():
             pass
     return all_events
 
-def parse_market_data(raw_data):
-    """Parse pipe-delimited market data"""
+def parse_market_data(odds_str, event_name=""):
+    """Parse pipe-delimited market data from POST API response
+    
+    Format example:
+    1.252151159||OPEN|0||18865406.68|7074890786|1767622681|16606|ACTIVE|1.42|14.05|1.41|32503.79|...
+    
+    Each runner section starts with a selection ID followed by ACTIVE
+    """
     try:
-        parts = raw_data.split('~')
-        if len(parts) < 8:
+        parts = odds_str.split('|')
+        if len(parts) < 10:
             return None
         
         market_id = parts[0]
         selections = []
         
-        i = 7
+        # Extract team names from event_name if available
+        team_names = []
+        if event_name:
+            if ' v ' in event_name:
+                team_names = [t.strip() for t in event_name.split(' v ', 1)]
+            elif ' VS ' in event_name or ' vs ' in event_name:
+                sep = ' VS ' if ' VS ' in event_name else ' vs '
+                team_names = [t.strip() for t in event_name.split(sep, 1)]
+        
+        # Find ACTIVE sections (each runner starts with selection_id followed by ACTIVE)
+        runner_idx = 0
+        i = 0
         while i < len(parts):
-            if '|' in parts[i]:
-                runner_parts = parts[i].split('|')
-                if len(runner_parts) >= 11:
-                    selection_id = runner_parts[0]
-                    team_label = runner_parts[10] if len(runner_parts) > 10 else "Unknown"
-                    
-                    back_stakes = []
-                    for j in range(1, 4):
+            if parts[i] == 'ACTIVE':
+                # Found a runner section
+                # Format: selection_id|ACTIVE|back1_price|back1_stake|back2_price|back2_stake|back3_price|back3_stake|lay1_price|lay1_stake|...
+                selection_id = parts[i-1] if i > 0 else str(runner_idx)
+                
+                # Get team name
+                team_name = team_names[runner_idx] if runner_idx < len(team_names) else f"Selection {runner_idx + 1}"
+                
+                # Parse back stakes (positions i+2, i+4, i+6 are stakes)
+                back_stakes = []
+                for j in [i+2, i+4, i+6]:
+                    if j < len(parts):
                         try:
-                            back_stakes.append(float(runner_parts[j]) if runner_parts[j] else 0.0)
+                            back_stakes.append(float(parts[j]) if parts[j] else 0.0)
                         except:
                             back_stakes.append(0.0)
-                    
-                    lay_stakes = []
-                    for j in range(4, 7):
+                
+                # Parse lay stakes (positions i+8, i+10, i+12 are stakes)
+                lay_stakes = []
+                for j in [i+8, i+10, i+12]:
+                    if j < len(parts):
                         try:
-                            lay_stakes.append(float(runner_parts[j]) if runner_parts[j] else 0.0)
+                            lay_stakes.append(float(parts[j]) if parts[j] else 0.0)
                         except:
                             lay_stakes.append(0.0)
-                    
-                    selections.append({
-                        'selection_id': selection_id,
-                        'team': team_label,
-                        'back_stake': sum(back_stakes),
-                        'lay_stake': sum(lay_stakes)
-                    })
+                
+                selections.append({
+                    'selection_id': selection_id,
+                    'team': team_name,
+                    'back_stake': sum(back_stakes),
+                    'lay_stake': sum(lay_stakes)
+                })
+                
+                runner_idx += 1
             i += 1
         
         if selections:
             return {'market_id': market_id, 'selections': selections}
-    except:
-        pass
+    except Exception as e:
+        print(f"Parse error: {e}")
     return None
 
-def fetch_market_odds(market_id, sport_id=4):
-    """Fetch odds for a market"""
+def fetch_market_odds(market_id, sport_id=4, event_name=""):
+    """Fetch odds for a market using POST request"""
     try:
-        url = f"{ODDS_API}?marketId={market_id}&eventTypeId={sport_id}"
-        resp = requests.get(url, headers=HEADERS, timeout=3)
+        resp = requests.post(ODDS_API, data=f"market_ids[]={market_id}", headers=ODDS_HEADERS, timeout=3)
         if resp.status_code == 200:
-            data = resp.json()
-            if data.get("success") and data.get("data"):
-                return parse_market_data(data["data"])
-    except:
-        pass
+            result = resp.json()
+            if result and result[0]:
+                return parse_market_data(result[0], event_name)
+    except Exception as e:
+        print(f"Fetch odds error: {e}")
     return None
 
 def get_last_cumulative(market_id, selection_id):
@@ -224,9 +252,9 @@ def update_cumulative(market_id, selection_id, team_label, current_back, current
     except Exception as e:
         print(f"❌ Update error: {e}")
 
-def track_market(market_id, sport_id=4):
+def track_market(market_id, sport_id=4, event_name=""):
     """Track a market"""
-    market_data = fetch_market_odds(market_id, sport_id)
+    market_data = fetch_market_odds(market_id, sport_id, event_name)
     if not market_data:
         return False
     
@@ -266,7 +294,7 @@ def main():
             for event in events:
                 market_id = event.get("market_id")
                 event_name = event.get("name", event.get("event_name", "Unknown"))
-                sport_id = event.get("sport_id", 4)  # Get sport_id from event
+                sport_id = event.get("event_type_id", event.get("sport_id", 4))  # API uses event_type_id
                 
                 if market_id:
                     current_markets[market_id] = event_name
@@ -276,7 +304,7 @@ def main():
                         print(f"🆕 {sport_name} {event_name} ({market_id})")
                         tracked_markets[market_id] = event_name
                     
-                    track_market(market_id, sport_id)
+                    track_market(market_id, sport_id, event_name)
             
             finished = set(tracked_markets.keys()) - set(current_markets.keys())
             for market_id in finished:
